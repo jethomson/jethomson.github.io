@@ -1,0 +1,78 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>functions/calculate_filament_temp.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%CALCULATE_FILAMENT_TEMP - Calculates the temperature of a powered incandescent</span>
+0002 <span class="comment">%                          bulb's filament when given the bulb's initial (off)</span>
+0003 <span class="comment">%                          temperature, initial resistance, and final (on)</span>
+0004 <span class="comment">%                          resistance.</span>
+0005 <span class="comment">%</span>
+0006 <span class="comment">% If the light bulb is in thermal equilibrium with its surroundings, then</span>
+0007 <span class="comment">% the filament's initial temperature can be easily obtained by measuring the</span>
+0008 <span class="comment">% temperature of the room. The final resistance is calculated by dividing the</span>
+0009 <span class="comment">% hot filament's voltage by the current passing through it.</span>
+0010 <span class="comment">%</span>
+0011 <span class="comment">% Syntax:  Tf = calculate_filament_temp(Ti, Ri, Rf)</span>
+0012 <span class="comment">%</span>
+0013 <span class="comment">% Inputs:</span>
+0014 <span class="comment">%       Ti - initial temperature of the filament in Celsius [C].</span>
+0015 <span class="comment">%       Ri - initial resistance of the filament when the light bulb is off.</span>
+0016 <span class="comment">%       Rf - final resistance of the filament when the light bulb is on.</span>
+0017 <span class="comment">%</span>
+0018 <span class="comment">% Outputs:</span>
+0019 <span class="comment">%       Tf - the temperature of the filament in Kelvin [K].</span>
+0020 <span class="comment">%</span>
+0021 <span class="comment">% Example:</span>
+0022 <span class="comment">%    % These are about the values you should expect to input for a 100W bulb</span>
+0023 <span class="comment">%    % with a 120V supply and the bulb's initial temperature at room temperature</span>
+0024 <span class="comment">%    % (298 K, 25 °C, 77 °F). The resulting filament temperature Tf is 2800 K.</span>
+0025 <span class="comment">%    Tf = calculate_filament_temp(25, 9.5425, 144);</span>
+0026 <span class="comment">%</span>
+0027 <span class="comment">% Other m-files required: none</span>
+0028 <span class="comment">% Subfunctions: none</span>
+0029 <span class="comment">% MAT-files required: none</span>
+0030 <span class="comment">%</span>
+0031 <span class="comment">% See also: GENERATE_WBB_SPECTRUM</span>
+0032 <span class="comment">%</span>
+0033 <span class="comment">% Author: Jonathan Thomson</span>
+0034 <span class="comment">% Work:</span>
+0035 <span class="comment">% email:</span>
+0036 <span class="comment">% Website: http://jethomson.wordpress.com</span>
+0037 <span class="comment">%</span>
+0038 
+0039 function Tf = calculate_filament_temp(Ti, Ri, Rf)
+0040 
+0041     <span class="keyword">if</span> (nargin ~= 3)
+0042         usage(<span class="string">'calculate_filament_temp(Ti, Ri, Rf)'</span>);
+0043     end
+0044 
+0045     s = filesep;
+0046 
+0047     Ti = Ti + 273.15; <span class="comment">% convert from Celsius to Kelvin, [K]</span>
+0048     Ri = mean(Ri);
+0049     Rf = mean(Rf);
+0050 
+0051     <span class="comment">% load T and rho</span>
+0052     <span class="comment">% the resistivity (rho) of tungsten is temperature dependent</span>
+0053     load([<span class="string">'data'</span> s <span class="string">'essential_data_sets'</span> s <span class="string">'rho_vs_T.mat'</span>]);
+0054     rhoi = interp1(T, rho, Ti, <span class="string">'spline'</span>);
+0055     rhof = rhoi*(Rf/Ri);
+0056     Tf = interp1(rho, T, rhof, <span class="string">'spline'</span>); <span class="comment">%[K]</span>
+0057 
+0058 end
+</pre>
+
+</body>
+</html>

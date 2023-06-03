@@ -1,0 +1,121 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>scripts/tests/find_camera_gray_test.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">% This script will help you find the RGB color displayed on your monitor that</span>
+0002 <span class="comment">% appears gray in the photograph recorded by your camera. If you are working</span>
+0003 <span class="comment">% with raw images, then this color will look gray to your camera without any</span>
+0004 <span class="comment">% white balance mulitpliers applied. If you have a JPEG only camera, then the</span>
+0005 <span class="comment">% color that will appear gray depends on the white balance setting used. Some</span>
+0006 <span class="comment">% cameras can set a custom white balance on a target that saturates the CCD</span>
+0007 <span class="comment">% resulting in white balance multipliers that are all 1 or at least all equal,</span>
+0008 <span class="comment">% which is equivalent to no white balance at all. This trick can be used to</span>
+0009 <span class="comment">% find the RGB color that looks gray to your JPEG only camera without white</span>
+0010 <span class="comment">% balance.</span>
+0011 <span class="comment">%</span>
+0012 <span class="comment">% The RGB color that appears gray to your camera can be determined by solving a</span>
+0013 <span class="comment">% set of simultaneous equations that relate a stimulus color (the color</span>
+0014 <span class="comment">% displayed by the monitor) to the response color (the color recorded by the</span>
+0015 <span class="comment">% camera). The parameters of the simultaneous equations, denoted M, are a set</span>
+0016 <span class="comment">% of nine multipliers, three for each channel. The independent variable is the</span>
+0017 <span class="comment">% stimulus, denoted S. The dependent variable is the reponse, denoted R.</span>
+0018 <span class="comment">% M*S = R (eqn. 1)</span>
+0019 <span class="comment">% if Srgb = [255   0   0; ...</span>
+0020 <span class="comment">%              0 255   0; ...</span>
+0021 <span class="comment">%              0   0 255]</span>
+0022 <span class="comment">% then M*Srgb = Rrgb, and M = Rrgb*inv(Srgb)</span>
+0023 <span class="comment">% therefore if Rgray is defined as [64; 64; 64]</span>
+0024 <span class="comment">% then Sgray = inv(M)*Rgray, Sgray is the display's RGB color that looks gray</span>
+0025 <span class="comment">% to the camera. Sgray most likely will not appear gray to the human eye.</span>
+0026 <span class="comment">%</span>
+0027 <span class="comment">% Before running this script, take a photograph of the monitor displaying solid</span>
+0028 <span class="comment">% red (255, 0, 0), solid green (0, 255, 0), and solid blue (0, 0, 255). Use the</span>
+0029 <span class="comment">% same camera settings for each picture. You should defocus or use a diffuser to</span>
+0030 <span class="comment">% prevent recording the pixel pattern. If you are using this script to find the</span>
+0031 <span class="comment">% best color to take flats, you should use a diffuser, because you need to use</span>
+0032 <span class="comment">% the same focus for taking flats as you use for taking lights.</span>
+0033 <span class="comment">%</span>
+0034 <span class="comment">% The RGB color determined by this script will need to be fine-tuned to get it</span>
+0035 <span class="comment">% to look gray to your camera. It may not be possible to get it to be exactly</span>
+0036 <span class="comment">% gray, for example even when using an RGB color with no green (255, 0, 255)</span>
+0037 <span class="comment">% the resulting photo still has a green cast.</span>
+0038 <span class="comment">%</span>
+0039 <span class="comment">% Once you've found the color your camera sees as gray, it can be used to take</span>
+0040 <span class="comment">% flats that don't have a color cast or at least don't have a very strong color</span>
+0041 <span class="comment">% cast. If you've found your camera's raw gray, then you should be able to use</span>
+0042 <span class="comment">% this RGB color to set a custom white balance of equal multipliers. However,</span>
+0043 <span class="comment">% this may not work perfectly.</span>
+0044 <span class="comment">%</span>
+0045 <span class="comment">% see % http://jethomson.wordpress.com/spectrometer-articles/rgb-flats/</span>
+0046 
+0047 <span class="comment">%-----</span>
+0048 ftype = <span class="string">'PGM'</span>;
+0049 access_bayer_pattern(<span class="string">'gbrg'</span>);
+0050 fl = list_dir([<span class="string">'data/A590/tests/camera_gray_test/e0/'</span> ftype], <span class="string">'*'</span>, 1);
+0051 
+0052 <span class="comment">% camera gray</span>
+0053 Rgray = [64; 64; 64];
+0054 
+0055 <span class="comment">% display output/stimulus</span>
+0056 Srgb = [255 0 0; <span class="cont">...</span>
+0057         0 255 0; <span class="cont">...</span>
+0058         0 0 255];
+0059 <span class="comment">%-----</span>
+0060 
+0061 <span class="keyword">if</span> strcmpi(ftype, <span class="string">'JPG'</span>)
+0062     Srgb = sRGB2lin(Srgb);
+0063     red_rsp = image_mean(sRGB2lin(fl{6})); <span class="comment">% camera's response to red stimulus</span>
+0064     green_rsp = image_mean(sRGB2lin(fl{7}));
+0065     blue_rsp = image_mean(sRGB2lin(fl{8}));
+0066 <span class="keyword">else</span>
+0067     red_rsp = image_mean(fl{2});
+0068     green_rsp = image_mean(fl{3});
+0069     blue_rsp = image_mean(fl{4});
+0070 end
+0071 
+0072 <span class="comment">% row 1: red components of red, green, and blue responses</span>
+0073 <span class="comment">% row 2: green components of red, green, and blue responses</span>
+0074 <span class="comment">% row 3: blue components of red, green, and blue responses</span>
+0075 Rrgb = [red_rsp(1) green_rsp(1) blue_rsp(1); <span class="cont">...</span>
+0076         red_rsp(2) green_rsp(2) blue_rsp(2); <span class="cont">...</span>
+0077         red_rsp(3) green_rsp(3) blue_rsp(3)];
+0078 
+0079 
+0080 <span class="comment">% The backslash operator is faster but only works in this case because S is a</span>
+0081 <span class="comment">% scaled identity matrix, 255*I. Therefore, M*S = S*M. However, if S were not a</span>
+0082 <span class="comment">% scaled identity matrix, then M*S != S*M and one must use M = R*inv(S) instead.</span>
+0083 M = Srgb\Rrgb;
+0084 
+0085 <span class="comment">%M*S = R  --&gt; M = R*inv(S)</span>
+0086 <span class="comment">%M = Rrgb*inv(Srgb)</span>
+0087 
+0088 
+0089 <span class="comment">% Now determine the RGB value displayed by the LCD monitor that will result in</span>
+0090 <span class="comment">% a gray image being recorded by the camera.</span>
+0091 <span class="comment">% M*Sgray = Rgray</span>
+0092 <span class="comment">% Sgray = inv(M)*Rgray</span>
+0093 <span class="keyword">if</span> strcmp(ftype, <span class="string">'JPG'</span>)
+0094     Sgray = M\sRGB2lin(Rgray);
+0095     Sgray = Sgray*(255/max(Sgray));
+0096     display_color = round(lin2sRGB(Sgray))
+0097 <span class="keyword">elseif</span> strcmpi(ftype, <span class="string">'PGM'</span>)
+0098     Sgray = M\Rgray;
+0099     Sgray = Sgray*(255/max(Sgray));
+0100     display_color = round(Sgray)
+0101 end
+</pre>
+
+</body>
+</html>

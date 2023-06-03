@@ -1,0 +1,70 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>scripts/primary/initialize_spectrometer_workspace.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">% This script creates and initializes the variables that construct the path to</span>
+0002 <span class="comment">% the spectrographs you wish to process.</span>
+0003 <span class="comment">%</span>
+0004 <span class="comment">% This script also sets the Bayer filter pattern. Remember that batch_raw_decode</span>
+0005 <span class="comment">% outputs the Bayer filter pattern of the images it decodes. Keep in mind that</span>
+0006 <span class="comment">% cropping a Bayer raw image may change which filter pattern should be used to</span>
+0007 <span class="comment">% demosaic the image.</span>
+0008 
+0009 <span class="comment">% User-defined variables:</span>
+0010 <span class="comment">%  camera - camera identifier.</span>
+0011 <span class="comment">%  ftype - type of file to process. JPG and PGM are supported.</span>
+0012 <span class="comment">%  exposure - the exposure time of the spectrographs. This is used to load the</span>
+0013 <span class="comment">%             correct set of master calibration frames.</span>
+0014 <span class="comment">%  sdate - date spectrographs were taken.</span>
+0015 
+0016 clear access_spectrometer_object
+0017 
+0018 so_name = <span class="string">'b'</span>;
+0019 switch so_name
+0020 
+0021 <span class="keyword">case</span> <span class="string">'a'</span>
+0022     so.camera = <span class="string">'A75'</span>;
+0023     so.ftype = <span class="string">'JPG'</span>;
+0024     so.exposure = <span class="string">'1dot6s'</span>;
+0025     so.sdate = <span class="string">'2012_08_12'</span>;
+0026 
+0027 <span class="keyword">case</span> <span class="string">'b'</span>
+0028     so.camera = <span class="string">'A590'</span>;
+0029 <span class="comment">%    so.ftype = 'JPG';</span>
+0030     so.ftype = <span class="string">'PGM'</span>;
+0031     so.exposure = <span class="string">'2s'</span>;
+0032 <span class="comment">%    so.sdate = '2012_07_22';</span>
+0033     so.sdate = <span class="string">'2012_08_30'</span>;
+0034 <span class="comment">%    so.sdate = '2012_09_13';</span>
+0035 
+0036     <span class="comment">%so.raven = 'Galifianakis';</span>
+0037 
+0038     <span class="comment">% set Bayer filter pattern.</span>
+0039     <span class="comment">% Bayer filter pattern for a DNG from an A590</span>
+0040     so.bfp = <span class="string">'gbrg'</span>;
+0041     access_bayer_pattern(<span class="string">'gbrg'</span>);
+0042 
+0043 otherwise
+0044 
+0045 end
+0046 
+0047 s = filesep;
+0048 so.bd = [<span class="string">'data'</span> s so.camera s <span class="string">'frames'</span>]; <span class="comment">% base directory</span>
+0049 
+0050 access_spectrometer_object(so);
+</pre>
+
+</body>
+</html>

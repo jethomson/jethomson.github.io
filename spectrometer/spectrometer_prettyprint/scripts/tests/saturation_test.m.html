@@ -1,0 +1,199 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>scripts/tests/saturation_test.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">% This script will calculate an image's RGB histogram, display the bin number</span>
+0002 <span class="comment">% and counts of the three rightmost non-empty bins of each channel, and display</span>
+0003 <span class="comment">% the bin number of the end of the right-hand side tail. It will also plot the</span>
+0004 <span class="comment">% log of each histogram and a portion of each histogram zoomed to the rightmost</span>
+0005 <span class="comment">% non-empty bin. This information will help you determine if your image is</span>
+0006 <span class="comment">% saturated, which channels are saturated, how close an image is to being</span>
+0007 <span class="comment">% saturated, and whether an image is saturated or just has hot pixels.</span>
+0008 <span class="comment">%</span>
+0009 <span class="comment">% Before using this script you should take a saturated image. To do this, take</span>
+0010 <span class="comment">% a photograph with a long exposure time of a brightly illuminated sheet of</span>
+0011 <span class="comment">% paper so that the photo is overexposed. This will help you learn the</span>
+0012 <span class="comment">% saturation point of each channel of your camera. The saturation point will be</span>
+0013 <span class="comment">% the peak on the right hand side of the histogram after which all points are</span>
+0014 <span class="comment">% zero. If the last non-empty bin is the last bin or the last non-empty bin has</span>
+0015 <span class="comment">% a count that is much greater than those of the bins that directly precede it</span>
+0016 <span class="comment">% then the channel is saturated. The tail of the histogram and the saturation</span>
+0017 <span class="comment">% point will be the same or very close together if a channel is actually</span>
+0018 <span class="comment">% saturated. Note that some hot pixels are to be expected at the saturation</span>
+0019 <span class="comment">% point, and that the code for finding the right-hand tail is not perfect. So</span>
+0020 <span class="comment">% before ruling out a particular exposure as saturated you should examine a</span>
+0021 <span class="comment">% plot of it's histogram, especially the right-hand side tail. The different</span>
+0022 <span class="comment">% colored channels may have different saturation points. Different light sources</span>
+0023 <span class="comment">% have different proportions of red, green, and blue light. For example, an</span>
+0024 <span class="comment">% incandescent has more red than green, and more green than blue, but a</span>
+0025 <span class="comment">% fluorescent light will have more blue. So make sure you are actually</span>
+0026 <span class="comment">% saturating a channel, before you make note of it's saturation point.</span>
+0027 <span class="comment">%</span>
+0028 <span class="comment">% The black point of your camera is the leftmost non-empty bin. This may be</span>
+0029 <span class="comment">% zero but probably is not.</span>
+0030 <span class="comment">%</span>
+0031 <span class="comment">% Once you've determined what level your channels saturate at you can determine</span>
+0032 <span class="comment">% the proper exposure for you spectrographs so that your CCD will operate in</span>
+0033 <span class="comment">% its linear region. Use this script to check that your spectrographs are</span>
+0034 <span class="comment">% not saturated.</span>
+0035 <span class="comment">%</span>
+0036 <span class="comment">% --------------------</span>
+0037 <span class="comment">%</span>
+0038 <span class="comment">% ===Example===</span>
+0039 <span class="comment">%</span>
+0040 <span class="comment">% channel -- bin: count; bin: count; bin: count</span>
+0041 <span class="comment">% red   -- 1023: 1014; 1022: 103; 1021: 289</span>
+0042 <span class="comment">% green -- 1023: 1; 897: 1; 701: 2</span>
+0043 <span class="comment">% blue  -- 938: 1; 528: 1; 527: 2</span>
+0044 <span class="comment">% red tail: 1023; green tail: 701; blue tail: 528</span>
+0045 <span class="comment">%</span>
+0046 <span class="comment">% Here we can see that the red channel is saturated because the rightmost</span>
+0047 <span class="comment">% non-empty bin (1023) is same as the red tail. Plus the next non-empty bins</span>
+0048 <span class="comment">% (1022 and 1021) are contiguous to the first, and the right-most (1023) has a</span>
+0049 <span class="comment">% count greater than the bins that precede it. You may think that the green</span>
+0050 <span class="comment">% channel is saturated because bin 1023 is non-empty, but judging by the green</span>
+0051 <span class="comment">% tail and the other two non-empty bins listed it should be concluded that the</span>
+0052 <span class="comment">% count in bin 1023 is because of a hot pixel. The blue channel is not saturated</span>
+0053 <span class="comment">% either, but has a hot pixel at bin 938.</span>
+0054 <span class="comment">%</span>
+0055 
+0056 close all
+0057 clear all
+0058 clc
+0059 
+0060 s = filesep;
+0061 
+0062 filenum = 2; <span class="comment">%&lt;-- change this to look at different files in file list</span>
+0063 ftype = <span class="string">'PGM'</span>;
+0064 <span class="comment">%ftype = 'JPG';</span>
+0065 makeplots = true;
+0066 
+0067 fl = list_dir([<span class="string">'data'</span> s <span class="string">'A590'</span> s <span class="string">'tests'</span> s <span class="string">'saturation'</span> s <span class="string">'spectral'</span> s ftype], [<span class="string">'*.'</span> ftype], 1);
+0068 
+0069 <span class="keyword">if</span> strcmpi(ftype, <span class="string">'JPG'</span>)
+0070     final_bin = 255;
+0071     A = double(imread(fl{filenum}));
+0072 <span class="keyword">elseif</span> strcmpi(ftype, <span class="string">'PGM'</span>)
+0073     pattern = <span class="string">'gbrg'</span>;
+0074     final_bin = 1023;
+0075     A = bayer_demosaic(fl{filenum}, pattern, false);
+0076 end
+0077 
+0078 [h, w, nd] = size(A);
+0079 A = reshape(A, [h*w nd]);
+0080 Ar = A(:, 1);
+0081 Ag = A(:, 2);
+0082 Ab = A(:, 3);
+0083 
+0084 bn = 0:final_bin;
+0085 nr = hist(Ar, bn);
+0086 ng = hist(Ag, bn);
+0087 nb = hist(Ab, bn);
+0088 nr(1) = 0;
+0089 ng(1) = 0;
+0090 nb(1) = 0;
+0091 
+0092 
+0093 <span class="comment">% last three non-empty bins in descending order</span>
+0094 tmp = fliplr(bn(nr&gt;0));
+0095 nebr = tmp(1:3);
+0096 tmp = fliplr(bn(ng&gt;0));
+0097 nebg = tmp(1:3);
+0098 tmp = fliplr(bn(nb&gt;0));
+0099 nebb = tmp(1:3);
+0100 
+0101 <span class="comment">% find the number of counts in the last three non-empty bins.</span>
+0102 cr = nr(nebr+1); <span class="comment">% add 1 because bn starts w/ 0, but Matlab arrays start w/ 1</span>
+0103 cg = ng(nebg+1);
+0104 cb = nb(nebb+1);
+0105 
+0106 <span class="comment">% display the last three non-empty bins and their counts.</span>
+0107 pr = [nebr; cr];
+0108 pg = [nebg; cg];
+0109 pb = [nebb; cb];
+0110 fprintf(<span class="string">'channel -- bin: count; bin: count; bin: count\n'</span>)
+0111 fprintf(<span class="string">'red   -- %d: %d; %d: %d; %d: %d\n'</span>, pr(:));
+0112 fprintf(<span class="string">'green -- %d: %d; %d: %d; %d: %d\n'</span>, pg(:));
+0113 fprintf(<span class="string">'blue  -- %d: %d; %d: %d; %d: %d\n'</span>, pb(:));
+0114 
+0115 
+0116 <span class="comment">% smooth histogram to remove gaps and convert to a binary</span>
+0117 <span class="comment">% (empty,0 / non-empty,1) histogram.</span>
+0118 filt_len = 5;
+0119 NR = conv(ones(1,filt_len)/filt_len, nr) &gt; 0;
+0120 NG = conv(ones(1,filt_len)/filt_len, ng) &gt; 0;
+0121 NB = conv(ones(1,filt_len)/filt_len, nb) &gt; 0;
+0122 
+0123 <span class="comment">% find first transition from 1 to 0 in binary histogram. this transition marks</span>
+0124 <span class="comment">% the right tail of the histogram, where the counts go from greater than 0 to 0.</span>
+0125 <span class="comment">% if a channel is saturated it's binary histogram will end with a 1, so append</span>
+0126 <span class="comment">% a 0 to the end of it so that the transition point can be detected.</span>
+0127 [ign, tr] = min(diff([NR 0]));
+0128 [ign, tg] = min(diff([NG 0]));
+0129 [ign, tb] = min(diff([NB 0]));
+0130 
+0131 <span class="comment">% filtering created filt_len-1 non-empty bins after the end of the tail so move</span>
+0132 <span class="comment">% index back by that amount. then subtract 1 to convert index to bin number.</span>
+0133 tailr = tr - (filt_len-1) - 1;
+0134 tailg = tg - (filt_len-1) - 1;
+0135 tailb = tb - (filt_len-1) - 1;
+0136 
+0137 
+0138 fprintf(<span class="string">'red tail: %d; green tail: %d; blue tail: %d\n'</span>, tailr, tailg, tailb);
+0139 
+0140 <span class="keyword">if</span> (makeplots == true)
+0141     figure
+0142     subplot(211)
+0143     bar(bn, log(nr))
+0144     title(<span class="string">'Full Red Histogram (Logarithmic)'</span>)
+0145     subplot(212)
+0146     hold on
+0147     bar(bn, nr)
+0148     plot(tailr, nr(tailr+1), <span class="string">'*r'</span>)
+0149     plot(nebr(1), cr(1), <span class="string">'*r'</span>)
+0150     a = axis;
+0151     axis([a(1) a(2) a(3) cr(1)+10])
+0152     title(<span class="string">'Zoomed to Show Last Bin (Linear)'</span>)
+0153 
+0154     figure
+0155     subplot(211)
+0156     bar(bn, log(ng))
+0157     title(<span class="string">'Full Green Histogram (Logarithmic)'</span>)
+0158     subplot(212)
+0159     hold on
+0160     bar(bn, ng)
+0161     plot(tailg, ng(tailg+1), <span class="string">'*g'</span>)
+0162     plot(nebg(1), cg(1), <span class="string">'*g'</span>)
+0163     a = axis;
+0164     axis([a(1) a(2) a(3) cg(1)+10])
+0165     title(<span class="string">'Zoomed to Show Last Bin (Linear)'</span>)
+0166 
+0167     figure
+0168     subplot(211)
+0169     bar(bn, log(nb))
+0170     title(<span class="string">'Full Blue Histogram (Logarithmic)'</span>)
+0171     subplot(212)
+0172     hold on
+0173     bar(bn, nb)
+0174     plot(tailb, nb(tailb+1), <span class="string">'*b'</span>)
+0175     plot(nebb(1), cb(1), <span class="string">'*b'</span>)
+0176     a = axis;
+0177     axis([a(1) a(2) a(3) cb(1)+10])
+0178     title(<span class="string">'Zoomed to Show Last Bin (Linear)'</span>)
+0179 end
+</pre>
+
+</body>
+</html>

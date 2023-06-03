@@ -1,0 +1,67 @@
+<html>
+<head>
+<title>TSL230R_basic_example.pde</title>
+</head>
+
+<body>
+
+<pre>
+#include&nbsp;&lt;<span style="color: #CC6600;">FreqCount</span>.h&gt;
+
+const&nbsp;<span style="color: #CC6600;">int</span> nOE = 6;
+const&nbsp;<span style="color: #CC6600;">int</span> S0 = 8;
+const&nbsp;<span style="color: #CC6600;">int</span> S1 = 7;
+const&nbsp;<span style="color: #CC6600;">int</span> S2 = 9;
+const&nbsp;<span style="color: #CC6600;">int</span> S3 = 10;
+
+<span style="color: #7E7E7E;">//&nbsp;The&nbsp;TSL230R&nbsp;outputs&nbsp;a&nbsp;square&nbsp;wave&nbsp;if&nbsp;it&nbsp;is&nbsp;told&nbsp;to&nbsp;scale&nbsp;it's&nbsp;output.</span>
+<span style="color: #7E7E7E;">//&nbsp;A&nbsp;square&nbsp;wave&nbsp;is&nbsp;easier&nbsp;to&nbsp;detect.</span>
+<span style="color: #CC6600;">int</span> fscale = 2; <span style="color: #7E7E7E;">//divide by: 1, 2, 10, 100</span>
+
+<span style="color: #CC6600;">void</span> <span style="color: #CC6600;"><b>setup</b></span>() {
+
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">pinMode</span>(nOE, <span style="color: #006699;">OUTPUT</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">pinMode</span>(S0, <span style="color: #006699;">OUTPUT</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">pinMode</span>(S1, <span style="color: #006699;">OUTPUT</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">pinMode</span>(S2, <span style="color: #006699;">OUTPUT</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">pinMode</span>(S3, <span style="color: #006699;">OUTPUT</span>);
+
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(nOE, <span style="color: #006699;">LOW</span>); <span style="color: #7E7E7E;">//output enabled</span>
+&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #7E7E7E;">// set sensitivity</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #7E7E7E;">// S1 S0: L L = Power down, L H = multiply-by 1, H L = 10, H H = 100</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(S1, <span style="color: #006699;">LOW</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(S0, <span style="color: #006699;">HIGH</span>);
+
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #7E7E7E;">// set scaling</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #7E7E7E;">// S3 S2: L L = divide-by 1, L H = 2, H L = 10, H H = 100</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(S3, <span style="color: #006699;">LOW</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(S2, <span style="color: #006699;">HIGH</span>);
+
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;"><b>Serial</b></span>.<span style="color: #CC6600;">begin</span>(9600);
+
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #7E7E7E;">// This code is only correct for a gate_time of 1 second. This is</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #7E7E7E;">// an example so we're keeping it simple. If you want to use a</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #7E7E7E;">// different gate time you'll have to divide by the number of</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #7E7E7E;">// milliseconds per second and use floats when calculating the</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #7E7E7E;">// output frequency. 1000 milliseconds == 1 second.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">FreqCount</span>.<span style="color: #CC6600;">begin</span>(1000);
+}
+
+<span style="color: #CC6600;">void</span> <span style="color: #CC6600;"><b>loop</b></span>() {
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">unsigned</span> <span style="color: #CC6600;">long</span> f = 0;
+
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">if</span> (<span style="color: #CC6600;">FreqCount</span>.<span style="color: #CC6600;">available</span>()) {
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #7E7E7E;">// Read the counts per second multiply by fscale to get the</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #7E7E7E;">// actual frequency.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;f&nbsp;=&nbsp;fscale*(<span style="color: #CC6600;">FreqCount</span>.<span style="color: #CC6600;">read</span>());
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;"><b>Serial</b></span>.<span style="color: #CC6600;">print</span>(f);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;"><b>Serial</b></span>.<span style="color: #CC6600;">print</span>(<span style="color: #006699;">"\n"</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">delay</span>(20);
+&nbsp;&nbsp;&nbsp;&nbsp;}
+}
+
+</pre>
+
+</body>
+</html>

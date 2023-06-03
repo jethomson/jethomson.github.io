@@ -1,0 +1,60 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>TSL230_data_acquisition/create_metadata.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%</span>
+0002 s = filesep;
+0003 bd = <span class="string">'TSL230_data_acquisition'</span>;
+0004 sd = [bd s <span class="string">'saved_data'</span>];
+0005 odir = [bd s <span class="string">'metadata'</span>];
+0006 D = dir([sd s <span class="string">'*.mat'</span>]);
+0007 nf = length(D);
+0008 <span class="keyword">if</span> (nf == 0)
+0009     error([<span class="string">'create_metadata: contains no mat files (*.mat)'</span>]);
+0010 <span class="keyword">else</span>
+0011 
+0012     <span class="keyword">if</span> (exist(odir) == 0)
+0013         [status, msg, msgid] = mkdir(odir);
+0014         <span class="keyword">if</span> (status == 0)
+0015             error([<span class="string">'create_metadata: error creating '</span> odir <span class="string">' . '</span> msg]);
+0016         end
+0017     <span class="keyword">elseif</span> (exist(odir) ~= 7)
+0018         error([<span class="string">'create_metadata: '</span> odir <span class="cont">...</span>
+0019                 <span class="string">' already exists, but is not a directory!'</span>]);
+0020     end
+0021 
+0022     fl = {D.name};
+0023     for li = 1:nf
+0024         load([sd s fl{li}]);
+0025         fO = (mean(fO_light) - mean(fO_dark))/1000; <span class="comment">% [kHz]</span>
+0026 
+0027         [ign, fname, ign, ign] = fileparts(fl{li});
+0028 
+0029         fid = fopen([odir s fname <span class="string">'_metadata.txt'</span>], <span class="string">'w'</span>);
+0030         fprintf(fid, <span class="string">'sensor_type: %s\n'</span>, sensor_type);
+0031         fprintf(fid, <span class="string">'distance: %.4f\n'</span>, distance);
+0032         fprintf(fid, <span class="string">'distance_units: meters\n'</span>);
+0033         fprintf(fid, <span class="string">'TSL230_fO: %.4f\n'</span>, fO);
+0034         fprintf(fid, <span class="string">'TSL230_fO_units: kilohertz\n'</span>);
+0035         fprintf(fid, <span class="string">'TSL230_sensitivity: %d\n'</span>, sensitivity);
+0036         fclose(fid);
+0037     end
+0038 end
+0039 
+0040 clear all
+</pre>
+
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>./TSL2561_data_acquisition/save_data.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">% Normally this script will be called from get_data, but if the data has</span>
+0002 <span class="comment">% bad samples you should tell get_data not to save, remove the bad</span>
+0003 <span class="comment">% samples then call this script to save.</span>
+0004 
+0005 s = filesep;
+0006 
+0007 save(<span class="string">'-V6'</span>, [<span class="string">'data'</span> s <span class="string">'TSL2561_meter_output'</span> s fname], <span class="string">'sensitivity'</span>, <span class="cont">...</span>
+0008      <span class="string">'int_time'</span>, <span class="string">'distance'</span>, <span class="string">'counts_light'</span>, <span class="string">'counts_dark'</span>)
+</pre>
+
+</body>
+</html>

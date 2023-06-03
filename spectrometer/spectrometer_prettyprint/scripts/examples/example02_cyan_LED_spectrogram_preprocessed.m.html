@@ -1,0 +1,59 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>scripts/examples/example02_cyan_LED_spectrogram_preprocessed.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%</span>
+0002 <span class="comment">% This script demonstrates how to use the mat files that resulted from</span>
+0003 <span class="comment">% processing the spectrographs with batch_preprocess.</span>
+0004 <span class="comment">%</span>
+0005 <span class="comment">% call spectrometer_setup before running this script</span>
+0006 <span class="comment">%</span>
+0007 
+0008 s = filesep;
+0009 so = access_spectrometer_object();
+0010 
+0011 sd = [so.dir_light s <span class="string">'spectrographs'</span> s <span class="string">'Cyan_LED_3'</span>];
+0012 load([sd s so.ftype <span class="string">'_Cyan_LED_3_e0.mat'</span>]);
+0013 cyan = spctgrph;
+0014 Z = image2spectrum(cyan, <span class="string">'rgb'</span>);
+0015 
+0016 figure, hold on
+0017 
+0018 plot(so.lambda, Z(:,1), <span class="string">'r'</span>)
+0019 plot(so.lambda, Z(:,2), <span class="string">'g'</span>)
+0020 plot(so.lambda, Z(:,3), <span class="string">'b'</span>)
+0021 
+0022 Zgray = merge_RGB_spectrums(Z);
+0023 plot(so.lambda, Zgray, <span class="string">'k'</span>)
+0024 
+0025 a = axis;
+0026 axis([so.lambda(1) so.lambda(end) a(3) a(4)])
+0027 xlabel(<span class="string">'wavelength [nm]'</span>)
+0028 legend(<span class="string">'red channel'</span>, <span class="string">'green channel'</span>, <span class="string">'blue channel'</span>, <span class="string">'channels averaged'</span>)
+0029 
+0030 [pk, l] = max(Z);
+0031 pw = so.lambda(l);
+0032 plot(pw, pk, <span class="string">'k*'</span>)
+0033 disp(<span class="string">'Datasheet peak wavelength: 505nm'</span>);
+0034 fprintf(<span class="string">'Measured peak wavelength: Red=%.2fnm, Green=%.2fnm, Blue=%.2fnm\n'</span>, pw);
+0035 
+0036 [pk, l] = max(Zgray);
+0037 pw = so.lambda(l);
+0038 plot(pw, pk, <span class="string">'k*'</span>)
+0039 fprintf(<span class="string">'Measured peak wavelength: Gray=%.2fnm\n'</span>, pw);
+</pre>
+
+</body>
+</html>

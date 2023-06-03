@@ -1,0 +1,72 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>functions/access_bayer_pattern.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%ACCESS_BAYER_PATTERN - Controls access to the Bayer filter pattern.</span>
+0002 <span class="comment">%</span>
+0003 <span class="comment">% This function stores the Bayer filter pattern in a persistent variable. Access</span>
+0004 <span class="comment">% to the filter pattern is not restricted in any way. This accessor function was</span>
+0005 <span class="comment">% used instead of a global variable because it is more likely to prevent the</span>
+0006 <span class="comment">% pattern from being accidentally overwritten.</span>
+0007 <span class="comment">%</span>
+0008 <span class="comment">% Syntax:  BFP = access_bayer_pattern(pattern)</span>
+0009 <span class="comment">%</span>
+0010 <span class="comment">% Inputs:</span>
+0011 <span class="comment">%    pattern - the Bayer filter pattern.</span>
+0012 <span class="comment">%</span>
+0013 <span class="comment">% Outputs:</span>
+0014 <span class="comment">%    BFP - the stored Bayer filter pattern.</span>
+0015 <span class="comment">%</span>
+0016 <span class="comment">% Example:</span>
+0017 <span class="comment">%    %To set the Bayer filter pattern:</span>
+0018 <span class="comment">%    access_bayer_pattern(pattern);</span>
+0019 <span class="comment">%</span>
+0020 <span class="comment">%    %To get the Bayer filter pattern:</span>
+0021 <span class="comment">%    BFP = access_bayer_pattern();</span>
+0022 <span class="comment">%</span>
+0023 <span class="comment">%</span>
+0024 <span class="comment">% Other m-files required: none</span>
+0025 <span class="comment">% Subfunctions: none</span>
+0026 <span class="comment">% MAT-files required: none</span>
+0027 <span class="comment">%</span>
+0028 <span class="comment">% See also: BAYER_DEMOSAIC</span>
+0029 <span class="comment">%</span>
+0030 <span class="comment">% Author: Jonathan Thomson</span>
+0031 <span class="comment">% Work:</span>
+0032 <span class="comment">% email:</span>
+0033 <span class="comment">% Website: http://jethomson.wordpress.com</span>
+0034 <span class="comment">%</span>
+0035 
+0036 function argout = access_bayer_pattern(pattern)
+0037 
+0038     <span class="keyword">if</span> (nargin &gt; 1)
+0039         usage(<span class="string">'access_bayer_pattern(pattern)'</span>);
+0040     end
+0041 
+0042     persistent BFP;
+0043 
+0044     <span class="keyword">if</span> (exist(<span class="string">'pattern'</span>, <span class="string">'var'</span>) &amp;&amp; ~isempty(pattern))
+0045         BFP = pattern; <span class="comment">%Bayer Filter Pattern</span>
+0046     end
+0047 
+0048     <span class="keyword">if</span> (nargout == 1)
+0049         argout = BFP;
+0050     end
+0051 
+0052 end
+</pre>
+
+</body>
+</html>

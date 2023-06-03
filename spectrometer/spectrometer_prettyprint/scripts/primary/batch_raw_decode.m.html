@@ -1,0 +1,115 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>scripts/primary/batch_raw_decode.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">% This script uses dcraw to convert your camera's raw file format into Portable</span>
+0002 <span class="comment">% GrayMaps (PGM) or Tagged Image File Format (TIFF) . The variable in_ftype</span>
+0003 <span class="comment">% specifies the raw file format to be processed as well as the name of the</span>
+0004 <span class="comment">% directories that contains this type of file.</span>
+0005 
+0006 s = filesep;
+0007 
+0008 <span class="comment">% ==== modify these variables =====</span>
+0009 <span class="comment">%dir_data = 'data\A590\frames\tone_frames_paper';</span>
+0010 <span class="comment">%dir_data = ['data' s 'A590' s 'frames' s 'bias_frames'];</span>
+0011 <span class="comment">%dir_data = ['data' s 'A590' s 'frames' s 'dark_frames'];</span>
+0012 <span class="comment">%dir_data = ['data' s 'A590' s 'frames' s 'dark_frames' s 'light_darks' s '2s'];</span>
+0013 <span class="comment">%dir_data = ['data' s 'A590' s 'frames' s 'flat_frames'];</span>
+0014 dir_data = [<span class="string">'data'</span> s <span class="string">'A590'</span> s <span class="string">'frames'</span> s <span class="string">'light_frames'</span> s <span class="string">'2s'</span> s <span class="string">'2012_08_30'</span>];
+0015 <span class="comment">%dir_data = ['data' s 'A590' s 'frames' s 'light_frames' s '2s' s '2012_09_13'];</span>
+0016 
+0017 in_ftype = <span class="string">'DNG'</span>;
+0018 <span class="comment">%in_ftype = 'CRW';</span>
+0019 
+0020 out_ftype = <span class="string">'PGM'</span>;
+0021 <span class="comment">%out_ftype = 'TIFF';</span>
+0022 <span class="comment">% ==== end, modify these variables =====</span>
+0023 
+0024 <span class="keyword">if</span> strcmp(s, <span class="string">'/'</span>) <span class="comment">% in Linux</span>
+0025     dcraw = [<span class="string">'/usr/bin/dcraw'</span>];
+0026 <span class="keyword">elseif</span> strcmp(s, <span class="string">'\'</span>) <span class="comment">% in Windows</span>
+0027     dcraw = [<span class="string">'bin'</span> s <span class="string">'dcraw'</span>];
+0028 end
+0029 
+0030 decode_args = <span class="string">'-c -D -4 -t 0 -j'</span>;
+0031 finfo_args = <span class="string">'-v -i'</span>;
+0032 
+0033 <span class="keyword">if</span> strcmpi(out_ftype, <span class="string">'TIFF'</span>)
+0034     decode_args = [decode_args <span class="string">' -T'</span>];
+0035 end
+0036 
+0037 decode_cmd = [dcraw <span class="string">' '</span> decode_args <span class="string">' '</span>];
+0038 finfo_cmd = [dcraw <span class="string">' '</span> finfo_args <span class="string">' '</span>];
+0039 
+0040 flne = {}; <span class="comment">%initialize to empty for ~isempty(flne) test.</span>
+0041 
+0042 g = waitbar(0, [<span class="string">'Decoding raw spectrographs. '</span> <span class="cont">...</span>
+0043                 <span class="string">'This may take several minutes.'</span>]);
+0044 waitbar(0.001, g); <span class="comment">% Octave's buggy waitbar doesn't like 0 or 1</span>
+0045 dl = list_dir(dir_data, in_ftype, 3);
+0046 Ns = length(dl);
+0047 
+0048 for jj=1:Ns
+0049     idir = dl{jj};
+0050     [ign, pd] = pop_dirname(idir);
+0051     odir = [pd s out_ftype];
+0052 
+0053     <span class="keyword">if</span> (exist(odir) == 0)
+0054         [status, msg, msgid] = mkdir(odir);
+0055         <span class="keyword">if</span> (status == 0)
+0056             error([<span class="string">'batch_raw_decode: error creating '</span> odir <span class="string">' . '</span> msg]);
+0057         end
+0058     <span class="keyword">elseif</span> (exist(odir) ~= 7)
+0059         error([<span class="string">'batch_raw_decode: '</span> odir <span class="cont">...</span>
+0060                 <span class="string">' already exists, but is not a directory!'</span>]);
+0061     end
+0062 
+0063     fl = list_dir(idir, [<span class="string">'*.'</span> in_ftype], 1);
+0064     for kk=1:length(fl)
+0065         [ign, fname, ext] = fileparts(fl{kk});
+0066         system([decode_cmd fl{kk} <span class="string">' &gt; '</span> odir s fname <span class="string">'.'</span> out_ftype]);
+0067         flne = fl;
+0068     end
+0069     waitbar((jj/Ns)-0.001, g);
+0070 end
+0071 
+0072 disp(<span class="string">''</span>)
+0073 
+0074 <span class="keyword">if</span> ~isempty(flne)
+0075     <span class="comment">% Use the last file processed to get the information dcraw can output</span>
+0076     <span class="comment">% about the file.</span>
+0077     [ign, output] = system([finfo_cmd flne{1}]);
+0078     si = strfind(output, <span class="string">'Image size:'</span>);
+0079     sf = strfind(output, <span class="string">'Output size:'</span>);
+0080     hwstr = output(si:(sf-1));
+0081     <span class="comment">%[ign, ign, ign, M, ign, ign] = regexp(hwstr, '[0-9]+');</span>
+0082     [ign, ign, ign, M] = regexp(hwstr, <span class="string">'[0-9]+'</span>);
+0083     w = str2num(M{1});
+0084     h = str2num(M{2});
+0085 
+0086     si = strfind(output, <span class="string">'Filter pattern:'</span>);
+0087     sf = strfind(output, <span class="string">'Daylight multipliers:'</span>);
+0088     bfpstr = output(si:(sf-1));
+0089     [ign, idx] = regexp(bfpstr, <span class="string">':\s\w'</span>);
+0090     bfp = bfpstr(idx:idx+3);
+0091     fprintf([<span class="string">'These images have width: %d, height: %d, '</span> <span class="cont">...</span>
+0092              <span class="string">'and Bayer filter pattern: %s.\n'</span>], w, h, bfp);
+0093 end
+0094 
+0095 clear all
+</pre>
+
+</body>
+</html>

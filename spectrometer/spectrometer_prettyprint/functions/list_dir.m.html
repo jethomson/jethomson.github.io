@@ -1,0 +1,127 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>functions/list_dir.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%LIST_DIR - Lists the contents of a directory with the path to each item in the</span>
+0002 <span class="comment">%           list prepended to it. Will also list all subdirectories that match</span>
+0003 <span class="comment">%           if a search word is provided.</span>
+0004 <span class="comment">%</span>
+0005 <span class="comment">% Syntax: ld = list_dir(parentdir, searchname, listtype)</span>
+0006 <span class="comment">%</span>
+0007 <span class="comment">% Inputs:</span>
+0008 <span class="comment">%    parentdir  - path to the directory to be searched</span>
+0009 <span class="comment">%    searchname - search expression containing wildcard characters for finding</span>
+0010 <span class="comment">%                 files, or the exact name of the subdirectories to be found.</span>
+0011 <span class="comment">%    listtype   - If listtype is 1 then list all files (but not directories)</span>
+0012 <span class="comment">%                 under parentdir that match searchname. If listtype is 2 then</span>
+0013 <span class="comment">%                 list all child directories of parentdir (searchname is</span>
+0014 <span class="comment">%                 ignored). If listtype is 3 then recurse through all</span>
+0015 <span class="comment">%                 subdirectories of parentdir finding each directory whose name</span>
+0016 <span class="comment">%                 exactly matches searchname (wildcards are not allowed).</span>
+0017 <span class="comment">%</span>
+0018 <span class="comment">% Outputs:</span>
+0019 <span class="comment">%    ld - a list of files or directories</span>
+0020 <span class="comment">%</span>
+0021 <span class="comment">% Example:</span>
+0022 <span class="comment">%    % find all JPEGs in mydir</span>
+0023 <span class="comment">%    fl = list_dir('path/to/mydir', '*.JPG', 1);</span>
+0024 <span class="comment">%    % list all the child directories of mydir</span>
+0025 <span class="comment">%    dl = list_dir('path/to/mydir', '', 2);</span>
+0026 <span class="comment">%    % list all directories any number of levels below mydir named PGM</span>
+0027 <span class="comment">%    dl = list_dir('path/to/mydir', 'PGM', 3);</span>
+0028 <span class="comment">%</span>
+0029 <span class="comment">% Other m-files required: none</span>
+0030 <span class="comment">% Subfunctions: none</span>
+0031 <span class="comment">% MAT-files required: none</span>
+0032 <span class="comment">%</span>
+0033 <span class="comment">% See also: none</span>
+0034 <span class="comment">%</span>
+0035 <span class="comment">% Author: Jonathan Thomson</span>
+0036 <span class="comment">% Work:</span>
+0037 <span class="comment">% E-mail:</span>
+0038 <span class="comment">% Website: http://jethomson.wordpress.com</span>
+0039 <span class="comment">%</span>
+0040 
+0041 function ld = list_dir(parentdir, searchname, listtype)
+0042 
+0043     <span class="keyword">if</span> (nargin ~= 3)
+0044         usage(<span class="string">'list_dir(parentdir, searchname, listtype)'</span>);
+0045     end
+0046 
+0047     s = filesep;
+0048     ld = {};
+0049 
+0050     [dirname, pdirpath] = pop_dirname(parentdir);
+0051     <span class="keyword">if</span> isempty(pdirpath)
+0052         parentdir = dirname;
+0053     <span class="keyword">else</span>
+0054         parentdir = [pdirpath s dirname];
+0055     end
+0056 
+0057 
+0058     <span class="keyword">if</span> (listtype == 1)
+0059 
+0060         D = dir([parentdir s searchname]);
+0061         <span class="keyword">if</span> ~isempty(D)
+0062             filelist = {D([D.isdir]==0).name};
+0063 
+0064             for li = 1:length(filelist)
+0065                 ld{li} = [parentdir s filelist{li}];
+0066             end
+0067         end
+0068 
+0069     <span class="keyword">elseif</span> (listtype == 2)
+0070 
+0071         <span class="keyword">if</span> ~isempty(searchname)
+0072             disp([<span class="string">'list_dir: warning: searchname is ignored for listtype '</span> <span class="cont">...</span>
+0073                   num2str(listtype) <span class="string">'.'</span>]);
+0074         end
+0075 
+0076         D = dir(parentdir);
+0077         <span class="keyword">if</span> ~isempty(D)
+0078             dirlist = {D([D.isdir]==1).name};
+0079 
+0080             for li = 3:length(dirlist) <span class="comment">% start at 3 to skip . and ..</span>
+0081                 idx = length(ld)+1;
+0082                 ld{idx} = [parentdir s dirlist{li}];
+0083             end
+0084         end
+0085 
+0086     <span class="keyword">elseif</span> (listtype == 3)
+0087 
+0088         parentdir;
+0089         D = dir(parentdir);
+0090         D([D.isdir]==1).name;
+0091 
+0092         <span class="keyword">if</span> ~isempty(D)
+0093             dirlist = {D([D.isdir]==1).name};
+0094             for li = 3:length(dirlist); <span class="comment">% start at 3 to skip . and ..</span>
+0095                 d = dirlist{li};
+0096                 npd = [parentdir s d];
+0097                 <span class="keyword">if</span> strcmp(d, searchname)
+0098                     idx = length(ld)+1;
+0099                     ld{idx} = npd;
+0100                 <span class="keyword">else</span>
+0101                     ld = [ld; list_dir(npd, searchname, listtype)];
+0102                 end
+0103             end
+0104         end
+0105     end
+0106 
+0107 end
+</pre>
+
+</body>
+</html>

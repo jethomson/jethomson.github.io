@@ -1,0 +1,56 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>TSL230_data_acquisition/TSL230R_sanity_check.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">% From the TSL2561 datasheet:</span>
+0002 <span class="comment">% &quot;The 640 nm irradiance Ee is supplied by an AlInGaP light-emitting diode with</span>
+0003 <span class="comment">% the following characteristics: peak wavelength λp = 640 nm and spectral</span>
+0004 <span class="comment">% halfwidth ∆λ1⁄2 = 17 nm.&quot; --&gt; mu = 640 nm, FWHM = 2*17 nm</span>
+0005 <span class="comment">%</span>
+0006 <span class="comment">% This script assumes the same test LED was used to measure the typical output</span>
+0007 <span class="comment">% of the TSL230R.</span>
+0008 <span class="comment">%</span>
+0009 <span class="comment">% Operating characteristics from the TSL230R datasheet:</span>
+0010 <span class="comment">% With a sensitivity of 100x, frequency scaling of 1, Vdd = 5V, Ta = 25°C,</span>
+0011 <span class="comment">% Ee = 130 uW/cm^2, and λp = 640 nm the typical output frequency is 100 kHz.</span>
+0012 
+0013 s = filesep;
+0014 load([<span class="string">'data'</span> s <span class="string">'essential_data_sets'</span> s <span class="string">'TSL230R_Re_s1.mat'</span>]);
+0015 dlambda = lambda_Re(2)-lambda_Re(1);
+0016 
+0017 <span class="comment">% Re_s1.mat : (irradiance responsivity @ 640 nm of sensor with sensitivity of 1</span>
+0018 <span class="comment">%              and freq. scaling of 1 = 0.0077 [kHz/(uW/cm^2)] = 0.77 [kHz/(W/m^2)])</span>
+0019 <span class="comment">%             *(normalized spectral responsivity of sensor)</span>
+0020 Re_s100 = 100*Re_s1; <span class="comment">% response for a sensitivity of 100</span>
+0021 
+0022 e = exp(1);
+0023 Fled = @(mu, FWHM) e.^(-2.7726*((lambda_Re-mu)/FWHM).^2);
+0024 Xred = Fled(640, 2*17);
+0025 k = trapz(Xred).*(dlambda);
+0026 Ee = (130/k)*Xred; <span class="comment">% model of AlInGaP test LED, [uW/cm^2/nm]</span>
+0027 
+0028 <span class="comment">% Re_s100 has units of [kHz/(W/m^2)] so Ee needs to be converted</span>
+0029 <span class="comment">% from [uW/cm^2/nm]  to [W/m^2/nm]</span>
+0030 <span class="comment">% [uW/(cm^2)] * [(10^-6 W)/uW] * [cm^2/(10^-4 m^2)] = (1/100)*[W/m^2]</span>
+0031 <span class="comment">% i.e. 1*[uW/(cm^2)] = (1/100)*[W/m^2]</span>
+0032 f = trapz(Re_s100.*(Ee/100)).*(dlambda); <span class="comment">% [kHz], should be very close to 100</span>
+0033 
+0034 <span class="comment">% datasheet says typical output frequency for AlInGaP test LED should be 100 kHz</span>
+0035 <span class="comment">% at a sensitivity of 100x</span>
+0036 pct_error = 100*(f - 100)/100
+</pre>
+
+</body>
+</html>

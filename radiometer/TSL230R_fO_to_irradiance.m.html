@@ -1,0 +1,146 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>TSL230R_fO_to_irradiance.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%TSL230R_fO_to_irradiance - Converts the frequency output of the TSL230R to</span>
+0002 <span class="comment">%                           irradiance when given the light source's spectrum.</span>
+0003 <span class="comment">%</span>
+0004 <span class="comment">% Syntax:  [Ee, E] = TSL230R_fO_to_irradiance(lambda, X, fO, sensitivity)</span>
+0005 <span class="comment">%</span>
+0006 <span class="comment">% Inputs:</span>
+0007 <span class="comment">%    lambda - the spectrum's wavelength scale.</span>
+0008 <span class="comment">%         X - the light sources spectrum.</span>
+0009 <span class="comment">%        fO - the output of the TSL230R. (small eff, big OH)</span>
+0010 <span class="comment">%    sensitivity - the sensitivity setting of the TSL230R</span>
+0011 <span class="comment">%</span>
+0012 <span class="comment">% Outputs:</span>
+0013 <span class="comment">%    Ee - the light source's spectral irradiance.</span>
+0014 <span class="comment">%     E - the light source's irradiance.</span>
+0015 <span class="comment">%</span>
+0016 <span class="comment">% Example:</span>
+0017 <span class="comment">%    load('TSL230R_actinic.mat')</span>
+0018 <span class="comment">%    fO = mean(fO_light) - mean(fO_dark);</span>
+0019 <span class="comment">%    mu = 415;</span>
+0020 <span class="comment">%    FWHM = 30;</span>
+0021 <span class="comment">%    Xactinic = 75*exp(-2.7726*((so.lambda-mu)/FWHM).^2); % model spectrogram</span>
+0022 <span class="comment">%    Ee_meter = TSL230R_fO_to_irradiance(so.lambda, Xactinic, fO, sensitivity);</span>
+0023 <span class="comment">%</span>
+0024 <span class="comment">%    load('TSL230R_actinic.mat')</span>
+0025 <span class="comment">%    fO = mean(fO_light) - mean(fO_dark);</span>
+0026 <span class="comment">%    load('actinic_spectrograph.mat'); % loads spctgrph</span>
+0027 <span class="comment">%    Xactinic = image2spectrum(spctgrph); % spectrogram created from a picture</span>
+0028 <span class="comment">%    Ee_meter = TSL230R_fO_to_irradiance(so.lambda, Xactinic, fO, sensitivity);</span>
+0029 <span class="comment">%</span>
+0030 <span class="comment">%</span>
+0031 <span class="comment">% Other m-files required: none</span>
+0032 <span class="comment">% Subfunctions: none</span>
+0033 <span class="comment">% MAT-files required: none</span>
+0034 <span class="comment">%</span>
+0035 <span class="comment">% See also: NONE</span>
+0036 <span class="comment">%</span>
+0037 <span class="comment">% Author: Jonathan Thomson</span>
+0038 <span class="comment">% Work:</span>
+0039 <span class="comment">% email:</span>
+0040 <span class="comment">% Website: http://jethomson.wordpress.com</span>
+0041 <span class="comment">%</span>
+0042 
+0043 <span class="comment">%NOTES:</span>
+0044 <span class="comment">% This m-file uses the frequency output from the TSL230R, it's spectral</span>
+0045 <span class="comment">% responsivity, and a mathematical model of a lamp's spectrum or a</span>
+0046 <span class="comment">% spectrogram to determine the lamp's irradiance and spectral irradiance.</span>
+0047 <span class="comment">%</span>
+0048 <span class="comment">% Assuming the lamp's spotlight fills an area greater than the photodiode's</span>
+0049 <span class="comment">% aperture then the radiant spectral power (or power spectral density) entering</span>
+0050 <span class="comment">% the photodiode is the light's spectral irradiance [uW/(cm^2)/nm] multiplied</span>
+0051 <span class="comment">% by the area of the aperture [cm^2].</span>
+0052 <span class="comment">% [cm^2]*[uW/(cm^2)/nm] = [uW/nm]</span>
+0053 <span class="comment">%</span>
+0054 <span class="comment">% Once a photon has entered the photodiode it has a wavelength dependent</span>
+0055 <span class="comment">% probability of creating a electron/hole pair that produce a differential</span>
+0056 <span class="comment">% current. This conversion from spectral radiant power to current is</span>
+0057 <span class="comment">% represented by the photodiode's spectral responsivity [A/uW]. All of the</span>
+0058 <span class="comment">% differential currents naturally integrate to form the photodiode's total</span>
+0059 <span class="comment">% photocurrent because they enter the same conductor.</span>
+0060 <span class="comment">% integral{[A/uW]*[uW/nm]*[nm]} = [A]</span>
+0061 <span class="comment">%</span>
+0062 <span class="comment">% Finally the current-to-frequency converter transforms the current to the</span>
+0063 <span class="comment">% output frequency and scales it by the programmed frequency scaler.</span>
+0064 <span class="comment">% [kHz/A]*[A] = [kHz]</span>
+0065 <span class="comment">%</span>
+0066 <span class="comment">% The total transformation from spectral irradiance to frequency is represented</span>
+0067 <span class="comment">% by: [kHz] = [kHz/A]*integral{[A/uW]*[cm^2]*[uW/(cm^2)/nm]*[nm]}</span>
+0068 <span class="comment">%</span>
+0069 <span class="comment">% The datasheet only gives the normalized spectral responsivity (as a plot) and</span>
+0070 <span class="comment">% the system's responsivity at 640 nm, Re(640 nm) = 0.77 [kHz/(uW/(cm^2))]</span>
+0071 <span class="comment">% (when sensitivity is 100x and frequency scaler is 1x). The mat file Re_s1.mat</span>
+0072 <span class="comment">% is the spectral responsivity of the TSL230R for a sensitivity of 1. It was</span>
+0073 <span class="comment">% created by converting the datasheet's graph of the normalized spectral</span>
+0074 <span class="comment">% responsivity into a point-series and multiplying it by the system's</span>
+0075 <span class="comment">% responsivity at 640 nm with a frequency scaler of 1 and a sensitivity of 1,</span>
+0076 <span class="comment">% which is 0.0077 [kHz/(uW/(cm^2))].</span>
+0077 <span class="comment">%</span>
+0078 <span class="comment">% If the spectral irradiance incident on the TSL230R photodiode is represented</span>
+0079 <span class="comment">% by A(lambda) then fO = integral{Re(lambda)*A(lambda) dlambda} from 0 to inf.</span>
+0080 <span class="comment">% However, A(lambda) is unknown so we must use X(lambda) which has the same</span>
+0081 <span class="comment">% shape as A(lambda) but is off by an unknown multiplicative constant k</span>
+0082 <span class="comment">% because it is an uncalibrated spectrum (i.e. A(lambda) = k*X(lambda)).</span>
+0083 <span class="comment">% We can then use our mathematical model of the TSL230R to find the frequency</span>
+0084 <span class="comment">% output that would result if a light source with a spectrum X(lambda) incident</span>
+0085 <span class="comment">% on the sensor: fX = integral{Re(lambda)*X(lambda) dlambda}</span>
+0086 <span class="comment">%</span>
+0087 <span class="comment">% Since fO is known, fX can be found, and the TSL230R is a linear system, k can</span>
+0088 <span class="comment">% be found simply: k = fO/fX</span>
+0089 <span class="comment">% Therefore we have obtained the desired result Ee = k*X.</span>
+0090 <span class="comment">% The accuracy of your result depends on the accuracy of the TSL230R as well</span>
+0091 <span class="comment">% as how well X(lambda) matches the shape of A(lambda).</span>
+0092 <span class="comment">%</span>
+0093 <span class="comment">% Extra Info</span>
+0094 <span class="comment">% The detector area changes when the sensitivity is changed. The frequency</span>
+0095 <span class="comment">% scale of fO vs. Ee changes when the frequency scaling is changed.</span>
+0096 <span class="comment">%</span>
+0097 <span class="comment">% Full scale frequency equals (1.1 MHz)/fscale</span>
+0098 <span class="comment">%</span>
+0099 <span class="comment">% lambda must be in nm and between 250 nm and 1200 nm inclusive.</span>
+0100 <span class="comment">%</span>
+0101 
+0102 function [Ee, E] = TSL230R_fO_to_irradiance(lambda, X, fO, sensitivity)
+0103 
+0104     s = filesep;
+0105     <span class="comment">% load lambda [nm] and</span>
+0106     <span class="comment">% system responsivity at 1x sensitivity, Re_s1</span>
+0107     load([<span class="string">'data'</span> s <span class="string">'essential_data_sets'</span> s <span class="string">'Re_s1.mat'</span>])
+0108 
+0109     <span class="comment">% Re(640 nm) = sensitivity*0.0077 [kHz/(uW/cm^2)]</span>
+0110     Re = sensitivity*Re_s1; <span class="comment">% [kHz/(uW/(cm^2))]</span>
+0111 
+0112     <span class="comment">% interpolate so we can use lambda [nm] instead of lambda_Re</span>
+0113     Rei = interp1(lambda_Re, Re, lambda, <span class="string">'spline'</span>, 0);
+0114 
+0115     <span class="comment">% fX is the frequency that would be output if the model lamp shined</span>
+0116     <span class="comment">% light with a spectral irradiance X on the photodiode.</span>
+0117     dl = mean(diff(lambda)); <span class="comment">% [nm]</span>
+0118     fX = trapz(Rei.*X).*dl; <span class="comment">% [kHz]</span>
+0119 
+0120     k = fO./fX; <span class="comment">% scaling factor, [dimensionless]</span>
+0121 
+0122     Ee = k.*X; <span class="comment">% spectral irradiance of lamp, [uW/(cm^2)/nm]</span>
+0123     E = trapz(Ee).*dl; <span class="comment">% irradiance of lamp, [uW/(cm^2)]</span>
+0124 
+0125 end
+0126 
+</pre>
+
+</body>
+</html>

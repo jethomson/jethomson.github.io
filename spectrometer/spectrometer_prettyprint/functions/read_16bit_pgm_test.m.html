@@ -1,0 +1,78 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>functions/read_16bit_pgm_test.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%READ_16BIT_PGM_TEST - Checks a 16 bit PGM test image to see if Octave is</span>
+0002 <span class="comment">%                      able to read it. If this function returns false, then</span>
+0003 <span class="comment">%                      GraphicsMagick most likely has a quantum depth of 8 and</span>
+0004 <span class="comment">%                      Octave will not read 16 bit images correctly.</span>
+0005 <span class="comment">%</span>
+0006 <span class="comment">% Syntax:  read16bitOK = read_16bit_pgm_test()</span>
+0007 <span class="comment">%</span>
+0008 <span class="comment">% Inputs:</span>
+0009 <span class="comment">%    none</span>
+0010 <span class="comment">%</span>
+0011 <span class="comment">% Outputs:</span>
+0012 <span class="comment">%    read16bitOK = boolean, true if Octave is able to read the 16 bit test</span>
+0013 <span class="comment">%                  image or this function is not being run in Octave, and</span>
+0014 <span class="comment">%                  false if GraphicsMagick returns an error.</span>
+0015 <span class="comment">%</span>
+0016 <span class="comment">%</span>
+0017 <span class="comment">% Other m-files required: none</span>
+0018 <span class="comment">% Subfunctions: none</span>
+0019 <span class="comment">% MAT-files required: none</span>
+0020 <span class="comment">%</span>
+0021 <span class="comment">% See also: BAYER_DEMOSAIC, PNMREAD</span>
+0022 <span class="comment">%</span>
+0023 <span class="comment">% Author: Jonathan Thomson</span>
+0024 <span class="comment">% Work:</span>
+0025 <span class="comment">% email:</span>
+0026 <span class="comment">% Website: http://jethomson.wordpress.com</span>
+0027 <span class="comment">%</span>
+0028 
+0029 function read16bitOK = read_16bit_pgm_test()
+0030 
+0031     persistent warned = 0;
+0032     read16bitOK = true;
+0033     warning_string = [<span class="string">'read_16bit_pgm_test() -- Octave image library '</span> <span class="cont">...</span>
+0034                       <span class="string">'does not support reading 16 bit PGM images. '</span> <span class="cont">...</span>
+0035                       <span class="string">'pnmread() will be used instead. This will '</span> <span class="cont">...</span>
+0036                       <span class="string">'result in slower image reads.'</span>];
+0037 
+0038     <span class="comment">% OCTAVE_VERSION is a built in function, exist returns 5 in octave</span>
+0039     <span class="keyword">if</span> (exist(<span class="string">'OCTAVE_VERSION'</span>))
+0040         s = filesep;
+0041         fname = [<span class="string">'data'</span> s <span class="string">'essential_data_sets'</span> s <span class="cont">...</span>
+0042                  <span class="string">'pgm_test_image_16bit_raw.pgm'</span>];
+0043 
+0044         try
+0045             <span class="comment">% Octave crashes if imfinfo is called before any images</span>
+0046             <span class="comment">% are read.</span>
+0047             <span class="comment">%ign = imfinfo(fname);</span>
+0048             ign = imread(fname);
+0049         catch
+0050             <span class="keyword">if</span> (warned == 0)
+0051                 warning(warning_string)
+0052                 warned = 1;
+0053             end
+0054             read16bitOK = false;
+0055         end_try_catch
+0056     end
+0057 
+0058 end
+</pre>
+
+</body>
+</html>

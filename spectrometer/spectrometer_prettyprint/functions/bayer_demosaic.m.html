@@ -1,0 +1,151 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>functions/bayer_demosaic.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%BAYER_DEMOSAIC - Converts a Bayer raw image to an MxNx3 image matrix with</span>
+0002 <span class="comment">%                 separate red, green, and blue channels and interpolates the</span>
+0003 <span class="comment">%                 unknown components of a channel from neighbors of the same</span>
+0004 <span class="comment">%                 channel.</span>
+0005 <span class="comment">%</span>
+0006 <span class="comment">% Syntax:  R = bayer_demosaic(img, pattern, interpolate)</span>
+0007 <span class="comment">%</span>
+0008 <span class="comment">% Inputs:</span>
+0009 <span class="comment">%    img - Bayer raw image's filename or an image matrix (MxNx1)</span>
+0010 <span class="comment">%    pattern - the Bayer filter pattern of the camera that took img.</span>
+0011 <span class="comment">%              default: uses value returned from access_bayer_pattern().</span>
+0012 <span class="comment">%    interpolate - a boolean that if true, will result in unknown R, G, or B</span>
+0013 <span class="comment">%                  component values being interpolated from it's most proximate</span>
+0014 <span class="comment">%                  neighbors of the same color, and if false, will only separate</span>
+0015 <span class="comment">%                  the Bayer image into channels, setting the unknown components</span>
+0016 <span class="comment">%                  to zero. default: true.</span>
+0017 <span class="comment">%</span>
+0018 <span class="comment">% Outputs:</span>
+0019 <span class="comment">%    R - MxNx3 image matrix with separate red, green, and blue channels</span>
+0020 <span class="comment">%</span>
+0021 <span class="comment">% Example:</span>
+0022 <span class="comment">%    R = bayer_demosaic('path/myfilename.PGM', 'gbrg', true)</span>
+0023 <span class="comment">%</span>
+0024 <span class="comment">%    pattern = determine_bayer_pattern('ref/red.PGM', 101, 5);</span>
+0025 <span class="comment">%    access_bayer_pattern(pattern);</span>
+0026 <span class="comment">%    R = bayer_raw_read(I, [], false)</span>
+0027 <span class="comment">%</span>
+0028 <span class="comment">% Other m-files required: access_bayer_pattern, myimread</span>
+0029 <span class="comment">% Subfunctions: bayer_interp</span>
+0030 <span class="comment">% MAT-files required: none</span>
+0031 <span class="comment">%</span>
+0032 <span class="comment">% See also: BAYER_MOSAIC, ACCESS_BAYER_PATTERN</span>
+0033 <span class="comment">%</span>
+0034 <span class="comment">% Author: Jonathan Thomson</span>
+0035 <span class="comment">% Work:</span>
+0036 <span class="comment">% email:</span>
+0037 <span class="comment">% Website: http://jethomson.wordpress.com</span>
+0038 <span class="comment">%</span>
+0039 
+0040 function R = bayer_demosaic(img, pattern, interpolate)
+0041 
+0042     <span class="keyword">if</span> (nargin &lt; 1 || nargin &gt; 3 || isempty(img))
+0043         usage(<span class="string">'bayer_demosaic(img, pattern, interpolate)'</span>);
+0044     end
+0045 
+0046     <span class="keyword">if</span> (~exist(<span class="string">'pattern'</span>,<span class="string">'var'</span>) || isempty(pattern))
+0047         pattern = access_bayer_pattern();
+0048         <span class="keyword">if</span> isempty(pattern)
+0049             error([<span class="string">'bayer_demosaic: neither parameter pattern nor '</span> <span class="cont">...</span>
+0050                    <span class="string">'access_bayer_pattern() are set.'</span>]);
+0051         end
+0052     end
+0053 
+0054     <span class="keyword">if</span> (~exist(<span class="string">'interpolate'</span>,<span class="string">'var'</span>) || isempty(interpolate))
+0055         interpolate = true;
+0056     end
+0057 
+0058     <span class="keyword">if</span> ischar(img)
+0059         I = myimread(img);
+0060     <span class="keyword">else</span>
+0061         I = double(img);
+0062     end
+0063 
+0064     [h, w, nd] = size(I);
+0065 
+0066     <span class="keyword">if</span> (nd ~= 1)
+0067         error(<span class="string">'bayer_demosaic: image data must be MxNx1.'</span>);
+0068     end
+0069 
+0070     <span class="comment">% Transform pattern string into 2x2 cell array, one letter per cell.</span>
+0071     <span class="comment">% This gives us easy to use start indices through strcmp.</span>
+0072     bfp = mat2cell(reshape(pattern, [2,2]).', [1,1], [1,1]);
+0073 
+0074     <span class="comment">%red</span>
+0075     Red = zeros(h, w);
+0076     [bi,bj]=find(strcmpi(bfp, <span class="string">'r'</span>));
+0077     ri = bi:2:h;
+0078     cj = bj:2:w;
+0079     Red(ri, cj) = I(ri, cj);
+0080 
+0081     <span class="comment">%green</span>
+0082     Green1 = zeros(h, w);
+0083     Green2 = Green1;
+0084     [bi,bj]=find(strcmpi(bfp, <span class="string">'g'</span>)); <span class="comment">% two green filters</span>
+0085     ri = bi(1):2:h;
+0086     cj = bj(1):2:w;
+0087     Green1(ri, cj) = I(ri, cj);
+0088 
+0089     ri = bi(2):2:h;
+0090     cj = bj(2):2:w;
+0091     Green2(ri, cj) = I(ri, cj);
+0092 
+0093     <span class="comment">%blue</span>
+0094     Blue = zeros(h, w);
+0095     [bi,bj]=find(strcmpi(bfp, <span class="string">'b'</span>));
+0096     ri = bi:2:h;
+0097     cj = bj:2:w;
+0098     Blue(ri, cj) = I(ri, cj);
+0099 
+0100     <span class="keyword">if</span> (interpolate == true)
+0101         Red = bayer_interp(Red);     <span class="comment">% interpolate columnwise</span>
+0102         Red = bayer_interp(Red.').'; <span class="comment">% interpolate rowwise</span>
+0103         Green1 = bayer_interp(Green1);
+0104         Green1 = bayer_interp(Green1.').';
+0105         Green2 = bayer_interp(Green2);
+0106         Green2 = bayer_interp(Green2.').';
+0107         Green = (Green1+Green2)/2;
+0108         Blue = bayer_interp(Blue);
+0109         Blue = bayer_interp(Blue.').';
+0110     <span class="keyword">else</span>
+0111         Green = Green1 + Green2;
+0112     end
+0113 
+0114     R = reshape([Red Green Blue], [h w 3]);
+0115 
+0116 end
+0117 
+0118 <span class="comment">% Interpolates out zeros by replacing them with the average of the pixel</span>
+0119 <span class="comment">% directly above and the pixel directly below. Zeros along the top/bottom</span>
+0120 <span class="comment">% edge are replaced with the value of the pixel that's directly below/above.</span>
+0121 <span class="comment">% This function only interpolates columnwise. To interpolate rowwise</span>
+0122 <span class="comment">% rotate the input 90 degrees.</span>
+0123 function Ri = bayer_interp(img_chan)
+0124 
+0125     h = size(img_chan, 1);
+0126     B = [img_chan(1:2,:); img_chan; img_chan((h-1):h,:)];
+0127     Ri = filter(triang(3), 1, B);
+0128     Ri = Ri(4:(4+h-1),:);
+0129 
+0130 end
+0131 
+</pre>
+
+</body>
+</html>

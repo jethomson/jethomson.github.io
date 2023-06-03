@@ -1,0 +1,98 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>functions/process_metadata_file.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%PROCESS_METADATA_FILE - Loads the metadata text file associated with an</span>
+0002 <span class="comment">%                        unprocessed spectrograph and converts it to a struct</span>
+0003 <span class="comment">%                        named metadata.</span>
+0004 <span class="comment">%</span>
+0005 <span class="comment">% A metadata file is additional data about an unprocessed spectrograph. The</span>
+0006 <span class="comment">% metadata file contains information such as the distance the light source</span>
+0007 <span class="comment">% was from the spectrometer's slit, the output from the TSL230 (fO), etc.</span>
+0008 <span class="comment">%</span>
+0009 <span class="comment">% Syntax:  metadata = process_metadata_file(directory)</span>
+0010 <span class="comment">%</span>
+0011 <span class="comment">% Inputs:</span>
+0012 <span class="comment">%    directory - the spectrograph directory.</span>
+0013 <span class="comment">%</span>
+0014 <span class="comment">% Outputs:</span>
+0015 <span class="comment">%     metdata - the struct containing information in the metadata file.</span>
+0016 <span class="comment">%</span>
+0017 <span class="comment">% Example:</span>
+0018 <span class="comment">%</span>
+0019 <span class="comment">% Other m-files required: none</span>
+0020 <span class="comment">% Subfunctions: none</span>
+0021 <span class="comment">% MAT-files required: none</span>
+0022 <span class="comment">%</span>
+0023 <span class="comment">% See also: NONE</span>
+0024 <span class="comment">%</span>
+0025 <span class="comment">% Author: Jonathan Thomson</span>
+0026 <span class="comment">% Work:</span>
+0027 <span class="comment">% email:</span>
+0028 <span class="comment">% Website: http://jethomson.wordpress.com</span>
+0029 <span class="comment">%</span>
+0030 
+0031 function metadata = process_metadata_file(directory)
+0032 
+0033     metadata = [];
+0034 
+0035     dl = list_dir(directory, <span class="string">'*metadata.txt'</span>, 1);
+0036 
+0037     <span class="keyword">if</span> isempty(dl)
+0038         <span class="comment">% metadata file not found.</span>
+0039         return
+0040     end
+0041 
+0042     fname = dl{1};
+0043     fid = fopen(fname, <span class="string">'r'</span>);
+0044     <span class="keyword">if</span> (fid == -1)
+0045         error([<span class="string">'process_metadata: cannot open '</span> fname <span class="string">'.'</span>])
+0046     <span class="keyword">else</span>
+0047         md_line = fgetl(fid);
+0048         <span class="keyword">while</span> (check_line(md_line, fname) == true)
+0049             [field, count] = sscanf(md_line, <span class="string">'%s'</span>, 1);
+0050             ni = length(field)+1;
+0051             field = field(1:end-1); <span class="comment">% strip off colon</span>
+0052             [value, count] = sscanf(md_line(ni:end), <span class="string">'%s%c'</span>, inf);
+0053             metadata.(field) = value;
+0054 
+0055             md_line = fgetl(fid);
+0056         end
+0057     end
+0058 end
+0059 
+0060 function line_is_valid = check_line(md_line, fname)
+0061 
+0062     line_is_valid = true;
+0063 
+0064     <span class="keyword">if</span> (md_line == -1) <span class="comment">% EOF</span>
+0065         line_is_valid = false;
+0066         return
+0067     end
+0068 
+0069     <span class="keyword">if</span> isempty(md_line) || ~ischar(md_line)
+0070         error([<span class="string">'process_metadata: '</span> fname <span class="string">' has bad formatting.'</span>])
+0071     end
+0072 
+0073     [field, count] = sscanf(md_line, <span class="string">'%s'</span>, 1);
+0074     <span class="keyword">if</span> ~strcmpi(field(end), <span class="string">':'</span>)
+0075         error([<span class="string">'process_metadata: '</span> fname <span class="string">' has bad formatting.'</span>])
+0076     end
+0077 
+0078 end
+</pre>
+
+</body>
+</html>

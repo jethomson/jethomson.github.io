@@ -1,0 +1,45 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>./scripts/radiometrics/TSL2561_test.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">% From the TSL2561 datasheet:</span>
+0002 <span class="comment">% &quot;The 640 nm irradiance Ee is supplied by an AlInGaP light-emitting diode with</span>
+0003 <span class="comment">% the following characteristics: peak wavelength λp = 640 nm and spectral </span>
+0004 <span class="comment">% halfwidth ∆λ1⁄2 = 17 nm.&quot; --&gt; mu = 640 nm, FWHM = 2*17 nm</span>
+0005 <span class="comment">%</span>
+0006 <span class="comment">% With a gain of 16x, Vdd = 3V, Ta = 25°C, λp = 640 nm, Tint = 101 ms, and </span>
+0007 <span class="comment">% Ee = 36.3 uW/cm^2 the typical counts measured by the Channel 0 diode is 1000.</span>
+0008 
+0009 s = filesep;
+0010 load([<span class="string">'data'</span> s <span class="string">'essential_data_sets'</span> s <span class="string">'Re2561.mat'</span>]);
+0011 dlambda = lambda_Re(2)-lambda_Re(1);
+0012 
+0013 <span class="comment">% Re2561.mat : (irradiance responsivity @ 640 nm of Ch0 with int. time of 101 ms = 27.5 [counts/(uW/cm^2)])</span>
+0014 <span class="comment">%             *(normalized spectral responsivity of Ch0)</span>
+0015 
+0016 e = exp(1);
+0017 Fled = @(mu, FWHM) e.^(-2.7726*((lambda_Re-mu)/FWHM).^2);
+0018 Xred = Fled(640, 2*17);
+0019 k = trapz(Xred).*(dlambda);
+0020 Ee = (36.3/k)*Xred; <span class="comment">% model of AlInGaP test LED, [uW/nm/cm^2]</span>
+0021 
+0022 <span class="comment">% datasheet says typical counts for AlInGaP test LED should be 1000</span>
+0023 <span class="comment">% counts = 996.08</span>
+0024 <span class="comment">% pct error = 100*(1000 - 996.08)/1000 = 0.39211 %</span>
+0025 counts = trapz(Re2561.*Ee).*(dlambda);
+</pre>
+
+</body>
+</html>

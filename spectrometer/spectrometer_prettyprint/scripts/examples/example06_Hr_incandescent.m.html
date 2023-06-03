@@ -1,0 +1,137 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>scripts/examples/example06_Hr_incandescent.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%</span>
+0002 <span class="comment">% This script demonstrates using so.Hr to radiometrically calibrate a incandescent</span>
+0003 <span class="comment">% lamp's spectrogram and the output of a TSL230 irradiance meter to check the</span>
+0004 <span class="comment">% the spectrum's calibration. The 60W Sylvania bulb has a filament that is the</span>
+0005 <span class="comment">% same shape as the 100W calibration lamp's filament; the 60W GE bulb has a</span>
+0006 <span class="comment">% differently shaped filament.</span>
+0007 <span class="comment">%</span>
+0008 <span class="comment">% call spectrometer_setup and system_function_calibrated before running this script.</span>
+0009 <span class="comment">%</span>
+0010 
+0011 s = filesep;
+0012 so = access_spectrometer_object();
+0013 
+0014 <span class="comment">%lamp_type = '40Wclear'</span>
+0015 lamp_type = <span class="string">'60Wclear_syl'</span>
+0016 <span class="comment">%lamp_type = '60Wclear_ge'</span>
+0017 <span class="comment">%lamp_type = '100Wclear'</span>
+0018 
+0019 <span class="comment">% the range of wavelengths where the spectrogram isn't mostly noise</span>
+0020 <span class="keyword">if</span> strcmpi(so.ftype, <span class="string">'JPG'</span>)
+0021     l0 = 400; <span class="comment">% [nm]</span>
+0022     lf = 650; <span class="comment">% [nm]</span>
+0023 <span class="keyword">elseif</span> strcmpi(so.ftype, <span class="string">'PGM'</span>)
+0024     l0 = 400; <span class="comment">% [nm]</span>
+0025     lf = 690; <span class="comment">% [nm]</span>
+0026 end
+0027 
+0028 switch lamp_type
+0029 <span class="keyword">case</span> <span class="string">'40Wclear'</span>
+0030     sd = [so.dir_light s <span class="string">'spectrographs'</span> s <span class="string">'40W_GE_8'</span>];
+0031     load([sd s so.ftype <span class="string">'_40W_GE_8_e0.mat'</span>]);
+0032     Tf = 2632.9; <span class="comment">% 40W: own calc. 2632.9 K, internet avg. 2473.2 K</span>
+0033 
+0034 <span class="keyword">case</span> <span class="string">'60Wclear_syl'</span>
+0035     sd = [so.dir_light s <span class="string">'spectrographs'</span> s <span class="string">'60W_Sylvania_8'</span>];
+0036     load([sd s so.ftype <span class="string">'_60W_Sylvania_8_e0.mat'</span>]);
+0037     <span class="comment">%Tf = str2double(metadata.filament_temp);</span>
+0038     Tf = 2681.8; <span class="comment">% 60W: own calc. 2681.8 K, internet avg. 2707.73 K</span>
+0039 
+0040 <span class="keyword">case</span> <span class="string">'60Wclear_ge'</span>
+0041     sd = [so.dir_light s <span class="string">'spectrographs'</span> s <span class="string">'60W_GE_8'</span>];
+0042     load([sd s so.ftype <span class="string">'_60W_GE_8_e0.mat'</span>]);
+0043     Tf = 2681.8; <span class="comment">% 60W: own calc. 2681.8 K, internet avg. 2707.73 K</span>
+0044 
+0045 <span class="keyword">case</span> <span class="string">'100Wclear'</span>
+0046     load([so.dir_light s <span class="string">'reference'</span> s <span class="string">'radiometric'</span> s so.ftype <span class="string">'_radiometric_ref.mat'</span>]);
+0047     spctgrph = radiometric_ref;
+0048     Tf =  2772.7; <span class="comment">% 100W: own calc. 2772.7K, internet avg. 2786.8 K</span>
+0049 
+0050 otherwise
+0051     error(<span class="string">'example06_Hr_incandescent: unknown lamp type.'</span>);
+0052 end
+0053 
+0054 sensor_type = metadata.sensor_type;
+0055 fO = str2double(metadata.TSL230_fO); <span class="comment">% [kHz]</span>
+0056 sensitivity = str2double(metadata.TSL230_sensitivity);
+0057 distance = str2double(metadata.distance); <span class="comment">% [m]</span>
+0058 
+0059 Z = image2spectrum(spctgrph);
+0060 Z = filtfilt(so.Ftri, 1, Z);
+0061 Ee = Z./so.Hr; <span class="comment">% spectral irradiance, [W/m^2/nm]</span>
+0062 Ee_gray = merge_RGB_spectrums(Ee); <span class="comment">% spectral irradiance, [W/m^2/nm]</span>
+0063 
+0064 [ign, n0] = min(abs(so.lambda-l0));
+0065 [ign, nf] = min(abs(so.lambda-lf));
+0066 E1 = trapz(Ee_gray(n0:nf)).*(so.dlambda); <span class="comment">% irradiance, [W/m^2]</span>
+0067 
+0068 <span class="comment">% [W/(m^2)] * [(10^6 uW)/W] * [(m^2)/(10^4 cm^2)] = 100*[uW/cm^2]</span>
+0069 <span class="comment">% i.e. 1*[W/(m^2)] = 100*[uW/cm^2]</span>
+0070 disp([<span class="string">'irradiance (E1) : '</span> num2str(E1) <span class="string">' W/m^2 at distance '</span><span class="cont">...</span>
+0071       num2str(distance) <span class="string">' m.'</span>])
+0072 <span class="comment">%disp(['irradiance : ' num2str(100*E1) ' uW/cm^2 at distance '...</span>
+0073 <span class="comment">%      num2str(distance/100) ' cm.'])</span>
+0074 
+0075 
+0076 <span class="comment">%----------------------------</span>
+0077 <span class="comment">% check the irradiance result</span>
+0078 <span class="comment">%----------------------------</span>
+0079 
+0080 <span class="comment">% Ee_gray isn't a good model spectrum to pass to TSL230_fO_to_irradiance()</span>
+0081 <span class="comment">% because the spectrum viewed by the irradiance sensor continues above</span>
+0082 <span class="comment">% and below the maximum and minimum wavelengths captured by the camera.</span>
+0083 <span class="comment">% Therefore it's not possible to directly calibrate the spectrogram that</span>
+0084 <span class="comment">% was captured by the camera. This section of code directly calibrates a</span>
+0085 <span class="comment">% mathematical model of the spectrogram and compares it to the indirectly</span>
+0086 <span class="comment">% calibrated spectrogram obtained above.</span>
+0087 
+0088 dl = 0.1;
+0089 lambda_Re = 250:dl:1250;
+0090 
+0091 <span class="comment">% tungsten emissivity corrected black body spectrum, spectral radiance</span>
+0092 L = generate_Wbb_spectrum(lambda_Re, Tf, <span class="string">'power'</span>); <span class="comment">% [W/(sr*m^2)/nm]</span>
+0093 
+0094 <span class="comment">% convert radiance L to a model of the spectral irradiance.</span>
+0095 Af = 1; <span class="comment">% unknown emitting area, [m^2]</span>
+0096 Ee_model = Af*L/(distance^2); <span class="comment">% irradiance model, [W/m^2/nm]</span>
+0097 Ee2 = TSL230_fO_to_irradiance(lambda_Re, Ee_model, fO, sensitivity, sensor_type, <span class="string">'power'</span>);
+0098 
+0099 [ign, n0] = min(abs(lambda_Re-l0));
+0100 [ign, nf] = min(abs(lambda_Re-lf));
+0101 E2 = trapz(Ee2(n0:nf)).*dl;
+0102 
+0103 figure,    hold on
+0104 plot(so.lambda, fliplr(Ee))
+0105 <span class="comment">%plot(so.lambda, Ee_gray, 'k')</span>
+0106 plot(lambda_Re, Ee2, <span class="string">'k'</span>)
+0107 axis([so.lambda(1) so.lambda(end) 0 1.1*max(Ee_gray)])
+0108 ylabel(<span class="string">'spectral irradiance [W/m^2/nm]'</span>)
+0109 xlabel(<span class="string">'wavelength [nm]'</span>)
+0110 title(<span class="string">'incandescent spectrum calibration comparison'</span>)
+0111 <span class="comment">%legend('indirectly calibrated (blue channel)', ...</span>
+0112 <span class="comment">%       '(green)', ...</span>
+0113 <span class="comment">%       '(red)', 'directly calibrated')</span>
+0114 
+0115 pct_err = 100*(E1-E2)/E2;
+0116 disp([<span class="string">'total irradiant flux percent error : '</span> num2str(pct_err) <span class="string">'%'</span><span class="comment">%'])</span>
+0117 
+</pre>
+
+</body>
+</html>

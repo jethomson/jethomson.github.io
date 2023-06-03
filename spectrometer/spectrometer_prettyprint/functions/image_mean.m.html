@@ -1,0 +1,85 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>functions/image_mean.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%IMAGE_MEAN - Finds the mean of each channel of an image.</span>
+0002 <span class="comment">%</span>
+0003 <span class="comment">% Syntax:  m = image_mean(img, h, w)</span>
+0004 <span class="comment">%</span>
+0005 <span class="comment">% Inputs:</span>
+0006 <span class="comment">%    img - an image matrix or an image's filename.</span>
+0007 <span class="comment">%    h   - the height of the image centered region used to compute the mean. if</span>
+0008 <span class="comment">%          h is 'full' and w is empty, then the entire image is used to compute</span>
+0009 <span class="comment">%          the mean. default: 250.</span>
+0010 <span class="comment">%    w   - the width of the image centered region used to compute the mean.</span>
+0011 <span class="comment">%          default: 250.</span>
+0012 <span class="comment">%</span>
+0013 <span class="comment">% Outputs:</span>
+0014 <span class="comment">%    m - the mean of the median of each column of the region specified by h and</span>
+0015 <span class="comment">%        w.</span>
+0016 <span class="comment">%</span>
+0017 <span class="comment">% Example:</span>
+0018 <span class="comment">%    m = image_mean('path/filename');</span>
+0019 <span class="comment">%    h=100; w=h; m=image_mean(I, h, w);</span>
+0020 <span class="comment">%</span>
+0021 <span class="comment">% Other m-files required: frame_read</span>
+0022 <span class="comment">% Subfunctions: none</span>
+0023 <span class="comment">% MAT-files required: none</span>
+0024 <span class="comment">%</span>
+0025 <span class="comment">% See also: FRAME_READ</span>
+0026 <span class="comment">%</span>
+0027 <span class="comment">% Author: Jonathan Thomson</span>
+0028 <span class="comment">% Work:</span>
+0029 <span class="comment">% E-mail:</span>
+0030 <span class="comment">% Website: http://jethomson.wordpress.com</span>
+0031 <span class="comment">%</span>
+0032 function m = image_mean(img, h, w)
+0033 
+0034     <span class="keyword">if</span> (nargin &lt; 1 || nargin &gt; 3 || isempty(img))
+0035         usage(<span class="string">'image_mean(img, h, w)'</span>);
+0036     end
+0037 
+0038     <span class="keyword">if</span> ischar(img)
+0039         [ign, ign, ext] = fileparts(img);
+0040         I = frame_read(img);
+0041     <span class="keyword">else</span>
+0042         ext = <span class="string">''</span>;
+0043         I = double(img);
+0044     end
+0045 
+0046     <span class="keyword">if</span> (~exist(<span class="string">'h'</span>,<span class="string">'var'</span>) || isempty(h))
+0047         h = 250;
+0048     end
+0049 
+0050     <span class="keyword">if</span> (~exist(<span class="string">'w'</span>,<span class="string">'var'</span>) || isempty(w))
+0051         w = 250;
+0052     end
+0053 
+0054     <span class="comment">% if not told to take the mean of the entire image, then crop it.</span>
+0055     <span class="keyword">if</span> (strcmpi(h,<span class="string">'full'</span>) ~= 1)
+0056         [imgh, imgw, nd] = size(I);
+0057         r0 = round((imgh-h)/2)+1;
+0058         c0 = round((imgw-w)/2)+1;
+0059         I = I(r0:(r0+h-1),c0:(c0+w-1),:);
+0060     end
+0061 
+0062     m = mean(median(I));
+0063     m = reshape(m, [1 nd]); <span class="comment">%from 1x1x3 to 1x3</span>
+0064 
+0065 end
+</pre>
+
+</body>
+</html>

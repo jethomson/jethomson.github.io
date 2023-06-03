@@ -1,0 +1,55 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>scripts/examples/example03_Hu_system_function_removal.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%</span>
+0002 <span class="comment">% This script demonstrates using so.Hu, the spectrometer's uncalibrated system</span>
+0003 <span class="comment">% function, to remove the system function from a spectrogram.</span>
+0004 <span class="comment">%</span>
+0005 <span class="comment">% call spectrometer_setup and system_function_uncalibrated before running this</span>
+0006 <span class="comment">% script</span>
+0007 <span class="comment">%</span>
+0008 
+0009 s = filesep;
+0010 so = access_spectrometer_object();
+0011 
+0012 sd = [so.dir_light s <span class="string">'spectrographs'</span> s <span class="string">'60W_Sylvania_8'</span>];
+0013 load([sd s so.ftype <span class="string">'_60W_Sylvania_8_e0.mat'</span>]);
+0014 Tf = 2681.8; <span class="comment">% 60W: own calc. 2681.8 K, internet avg. 2707.73 K</span>
+0015 
+0016 Z = image2spectrum(spctgrph);
+0017 Z = filtfilt(so.Ftri, 1, Z); <span class="comment">% distorted spectrum, [count]</span>
+0018 Zc = Z./so.Hu; <span class="comment">% uncalibrated, corrected spectrum, [photon/(s*m^2)/nm]</span>
+0019 Zc_gray = merge_RGB_spectrums(Zc);
+0020 
+0021 figure
+0022 subplot(211)
+0023 plot(so.lambda, fliplr(Z))
+0024 a = axis;
+0025 axis([so.lambda(1) so.lambda(end) a(3) a(4)])
+0026 title(<span class="string">'distorted spectrum'</span>)
+0027 subplot(212)
+0028 hold on
+0029 plot(so.lambda, fliplr(Zc))
+0030 plot(so.lambda, Zc_gray, <span class="string">'k'</span>)
+0031 a = axis;
+0032 axis([so.lambda(1) so.lambda(end) a(3) a(4)])
+0033 ylabel(<span class="string">'uncalibrated spectral photon irradiance [photon/(s*m^2)/nm]'</span>)
+0034 xlabel(<span class="string">'wavelength [nm]'</span>)
+0035 title(<span class="string">'uncalibrated, corrected spectrum'</span>)
+</pre>
+
+</body>
+</html>

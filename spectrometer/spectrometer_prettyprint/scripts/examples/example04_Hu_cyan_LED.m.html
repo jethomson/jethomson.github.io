@@ -1,0 +1,90 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>scripts/examples/example04_Hu_cyan_LED.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%</span>
+0002 <span class="comment">% This script demonstrates using so.Hu and the output of a TSL230 irradiance</span>
+0003 <span class="comment">% sensor to produce a radiometrically calibrated spectrum. so.Hu differs from</span>
+0004 <span class="comment">% the actual system function by a scaling factor, therefore, dividing the cyan</span>
+0005 <span class="comment">% LED's spectrum by so.Hu results in a corrected but uncalibrated spectrum.</span>
+0006 <span class="comment">% Since the resulting spectrum is only off by a scaling factor it can be</span>
+0007 <span class="comment">% directly calibrated using readings taken from a TSL230.</span>
+0008 <span class="comment">%</span>
+0009 <span class="comment">% After taking the spectrograph while the LED was pointed at the slit, I</span>
+0010 <span class="comment">% re-aimed the LED directly at the irradiance sensor. This was necessary because</span>
+0011 <span class="comment">% the LED is very directional. If your light source's radiation pattern is the</span>
+0012 <span class="comment">% same at the slit and TSL230 then you can take the irradiance measurement the</span>
+0013 <span class="comment">% same time you snap a spectrograph (i.e. you don't have to re-aim the light</span>
+0014 <span class="comment">% source).</span>
+0015 <span class="comment">%</span>
+0016 <span class="comment">% call spectrometer_setup and system_function_uncalibrated before running this</span>
+0017 <span class="comment">% script.</span>
+0018 <span class="comment">%</span>
+0019 
+0020 s = filesep;
+0021 so = access_spectrometer_object();
+0022 
+0023 <span class="comment">% the range of wavelengths where the spectrogram isn't mostly noise</span>
+0024 l0 = 435; <span class="comment">% [nm]</span>
+0025 lf = 600; <span class="comment">% [nm]</span>
+0026 
+0027 smooth_width = 11;
+0028 Ftri = triang(smooth_width);
+0029 Ftri = Ftri./sum(Ftri);
+0030 
+0031 sd = [so.dir_light s <span class="string">'spectrographs'</span> s <span class="string">'Cyan_LED_3'</span>];
+0032 load([sd s so.ftype <span class="string">'_Cyan_LED_3_e0.mat'</span> ]);
+0033 
+0034 sensor_type = metadata.sensor_type;
+0035 fO = str2double(metadata.TSL230_fO); <span class="comment">% [kHz]</span>
+0036 sensitivity = str2double(metadata.TSL230_sensitivity);
+0037 distance = str2double(metadata.distance); <span class="comment">% [m]</span>
+0038 
+0039 [ign, n0] = min(abs(so.lambda-l0));
+0040 [ign, nf] = min(abs(so.lambda-lf));
+0041 
+0042 h = 6.62606896*10^-34; <span class="comment">% Planck constant, [J*s]</span>
+0043 c = 299792458; <span class="comment">% speed of light, [m/s]</span>
+0044 Wp = h*c./(so.lambda(n0:nf)*10^-9); <span class="comment">% [J/photon]</span>
+0045 
+0046 Z = image2spectrum(spctgrph);
+0047 Z = filtfilt(Ftri, 1, Z); <span class="comment">% distorted spectrum, [count]</span>
+0048 Zc = Z./so.Hu; <span class="comment">% uncalibrated spectral photon irradiance, [photon/(s*m^2)/nm]</span>
+0049 Zc_green = Zc(n0:nf,2); <span class="comment">% the green channel only</span>
+0050 
+0051 <span class="comment">% E1 isn't calculated in this script. The variable name E1 is skipped in this</span>
+0052 <span class="comment">% script so E2 is easier to compare to the variable of the same name</span>
+0053 <span class="comment">% in example05.</span>
+0054 
+0055 <span class="comment">% Zc_green is the uncalibrated spectral photon irradiance of the cyan LED, [photon/(s*m^2)/nm]</span>
+0056 <span class="comment">% N2 is the directly calibrated spectral photon irradiance of the cyan LED, [photon/(s*m^2)/nm]</span>
+0057 N2 = TSL230_fO_to_irradiance(so.lambda(n0:nf), Zc_green, fO, sensitivity, sensor_type, <span class="string">'quantal'</span>);
+0058 
+0059 <span class="comment">% Ee2 is the directly calibrated spectral irradiance of the cyan LED, [W/m^2/nm]</span>
+0060 Ee2 = Wp.*N2; <span class="comment">% convert spectral photon irradiance to spectral irradiance.</span>
+0061 E2 = trapz(Ee2).*(so.dlambda); <span class="comment">% irradiance, [W/m^2]</span>
+0062 disp([<span class="string">'irradiance (E2) : '</span> num2str(E2) <span class="string">' W/m^2 at distance '</span><span class="cont">...</span>
+0063       num2str(distance) <span class="string">' m.'</span>])
+0064 
+0065 figure
+0066 plot(so.lambda(n0:nf), Ee2, <span class="string">'r'</span>)
+0067 axis([l0 lf 0 1.1*max(Ee2)])
+0068 ylabel(<span class="string">'spectral irradiance [W/m^2/nm]'</span>)
+0069 xlabel(<span class="string">'wavelength [nm]'</span>)
+0070 title(<span class="string">'directly calibrated, corrected spectrum of a cyan LED'</span>)
+</pre>
+
+</body>
+</html>

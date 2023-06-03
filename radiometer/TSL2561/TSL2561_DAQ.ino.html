@@ -1,0 +1,150 @@
+<html>
+<body>
+
+<pre>
+#include&nbsp;&lt;<span style="color: #CC6600;">Wire</span>.h&gt;
+#include&nbsp;<span style="color: #006699;">"TSL2561.h"</span>
+
+TSL2561&nbsp;tsl(TSL2561_ADDR_FLOAT);&nbsp;
+
+const&nbsp;<span style="color: #CC6600;">int</span> light_switch_pin = 13;
+
+<span style="color: #CC6600;">int</span> sensitivity = 16; <span style="color: #7E7E7E;">// 1x or 16x</span>
+<span style="color: #CC6600;">int</span> int_time = 101; <span style="color: #7E7E7E;">// 13, 101, 402 ms</span>
+<span style="color: #CC6600;">int</span> num_measurements = 0;
+
+<span style="color: #CC6600;">boolean</span> transmit = <span style="color: #CC6600;">false</span>;
+
+<span style="color: #CC6600;">void</span> light_switch (<span style="color: #CC6600;">int</span> switch_state)
+{
+	<span style="color: #CC6600;">if</span> (switch_state == 0)
+		<span style="color: #CC6600;">digitalWrite</span>(light_switch_pin, <span style="color: #006699;">LOW</span>);
+	<span style="color: #CC6600;">else</span> <span style="color: #CC6600;">if</span> (switch_state == 111)
+		<span style="color: #CC6600;">digitalWrite</span>(light_switch_pin, <span style="color: #006699;">HIGH</span>);
+}
+
+<span style="color: #CC6600;">void</span> set_sensitivity(<span style="color: #CC6600;">int</span> s)
+{
+	<span style="color: #CC6600;">switch</span> (s)
+	{
+	<span style="color: #CC6600;">case</span> 0: <span style="color: #7E7E7E;">// power down</span>
+		tsl.disable();
+		<span style="color: #CC6600;">break</span>;
+	<span style="color: #CC6600;">case</span> 1: <span style="color: #7E7E7E;">// 1x</span>
+		sensitivity&nbsp;=&nbsp;s;
+		tsl.setGain(TSL2561_GAIN_0X);&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #7E7E7E;">// set no gain (for bright situtations)</span>
+		<span style="color: #CC6600;">break</span>;
+	<span style="color: #CC6600;">case</span> 16: <span style="color: #7E7E7E;">// 16x</span>
+		sensitivity&nbsp;=&nbsp;s;
+		tsl.setGain(TSL2561_GAIN_16X);&nbsp;&nbsp;&nbsp;<span style="color: #7E7E7E;">// set 16x gain (for dim situations)</span>
+		<span style="color: #CC6600;">break</span>;
+	<span style="color: #CC6600;">default</span>:
+		<span style="color: #CC6600;">break</span>;
+	}
+}
+
+<span style="color: #CC6600;">void</span> set_timing (<span style="color: #CC6600;">int</span> i)
+{
+	<span style="color: #CC6600;">switch</span>(i)
+	{
+	<span style="color: #CC6600;">case</span> 13:
+		int_time&nbsp;=&nbsp;i;
+		tsl.setTiming(TSL2561_INTEGRATIONTIME_13MS);&nbsp;&nbsp;<span style="color: #7E7E7E;">// shortest integration time (bright light)</span>
+		<span style="color: #CC6600;">break</span>;
+	<span style="color: #CC6600;">case</span> 101:
+		int_time&nbsp;=&nbsp;i;
+		tsl.setTiming(TSL2561_INTEGRATIONTIME_101MS);&nbsp;&nbsp;<span style="color: #7E7E7E;">// medium integration time (medium light)</span>
+		<span style="color: #CC6600;">break</span>;
+	<span style="color: #CC6600;">case</span> 402:
+		int_time&nbsp;=&nbsp;i;
+		tsl.setTiming(TSL2561_INTEGRATIONTIME_402MS);&nbsp;&nbsp;<span style="color: #7E7E7E;">// longest integration time (dim light)</span>
+		<span style="color: #CC6600;">break</span>;
+	<span style="color: #CC6600;">default</span>:
+		<span style="color: #CC6600;">break</span>;
+	}
+}
+
+<span style="color: #CC6600;">void</span> <span style="color: #CC6600;"><b>setup</b></span>()
+{
+	<span style="color: #CC6600;">pinMode</span>(light_switch_pin, <span style="color: #006699;">OUTPUT</span>);
+
+	light_switch(0);
+	set_sensitivity(sensitivity);
+	set_timing(int_time);
+
+	<span style="color: #CC6600;"><b>Serial</b></span>.<span style="color: #CC6600;">begin</span>(9600); <span style="color: #7E7E7E;">// connect to the serial port</span>
+	<span style="color: #CC6600;">delay</span>(100);
+&nbsp;&nbsp;
+	<span style="color: #CC6600;">if</span> (tsl.<span style="color: #CC6600;">begin</span>())
+	{
+		<span style="color: #7E7E7E;">//Serial.println("Found sensor");</span>
+	}
+	<span style="color: #CC6600;">else</span>
+	{
+		<span style="color: #CC6600;"><b>Serial</b></span>.<span style="color: #CC6600;">println</span>(<span style="color: #006699;">"No sensor?"</span>);
+		<span style="color: #CC6600;">while</span> (1);
+	}
+}
+
+<span style="color: #CC6600;">void</span> <span style="color: #CC6600;"><b>loop</b></span>()
+{
+	uint16_t&nbsp;x&nbsp;=&nbsp;0;
+	<span style="color: #CC6600;">char</span> cmd = <span style="color: #006699;">'\0'</span>;
+	<span style="color: #CC6600;">char</span> argbuf[4] = <span style="color: #006699;">"xxx"</span>;
+	<span style="color: #CC6600;">int</span> arg = 0;
+
+	<span style="color: #CC6600;">if</span> (<span style="color: #CC6600;"><b>Serial</b></span>.<span style="color: #CC6600;">available</span>() &gt;= 4)
+	{
+		cmd&nbsp;=&nbsp;<span style="color: #CC6600;"><b>Serial</b></span>.<span style="color: #CC6600;">read</span>();
+		<span style="color: #CC6600;">for</span> (<span style="color: #CC6600;">int</span> i=0; i&lt;3; i++)
+			argbuf[i]&nbsp;=&nbsp;<span style="color: #CC6600;"><b>Serial</b></span>.<span style="color: #CC6600;">read</span>();
+
+		arg&nbsp;=&nbsp;atoi(argbuf);
+
+		<span style="color: #CC6600;">switch</span> (cmd)
+		{
+		<span style="color: #CC6600;">case</span> <span style="color: #006699;">'t'</span>:
+			transmit&nbsp;=&nbsp;<span style="color: #CC6600;">true</span>;
+			num_measurements&nbsp;=&nbsp;arg;
+			<span style="color: #CC6600;">break</span>;
+		<span style="color: #CC6600;">case</span> <span style="color: #006699;">'l'</span>:  <span style="color: #7E7E7E;">//arg: 000 is off, 111 is on</span>
+			light_switch(arg);
+			<span style="color: #CC6600;">break</span>;
+		<span style="color: #CC6600;">case</span> <span style="color: #006699;">'s'</span>:
+			set_sensitivity(arg);
+			<span style="color: #CC6600;">break</span>;
+		<span style="color: #CC6600;">case</span> <span style="color: #006699;">'i'</span>:
+			set_timing(arg);
+			<span style="color: #CC6600;">break</span>;
+		<span style="color: #CC6600;">default</span>: <span style="color: #7E7E7E;">// catches bad commands</span>
+			<span style="color: #CC6600;">break</span>;
+		}
+	}
+
+	<span style="color: #CC6600;">if</span> (transmit == <span style="color: #CC6600;">true</span>)
+	{
+		<span style="color: #7E7E7E;">//x = tsl.getLuminosity(TSL2561_VISIBLE);    // full spectrum - infrared</span>
+		x&nbsp;=&nbsp;tsl.getLuminosity(TSL2561_FULLSPECTRUM);
+		<span style="color: #7E7E7E;">//x = tsl.getLuminosity(TSL2561_INFRARED);</span>
+
+		<span style="color: #CC6600;"><b>Serial</b></span>.<span style="color: #CC6600;">println</span>(x, <span style="color: #006699;">DEC</span>);
+
+		num_measurements--;
+		<span style="color: #CC6600;">if</span> (num_measurements &lt;= 0)
+		{
+			transmit&nbsp;=&nbsp;<span style="color: #CC6600;">false</span>;
+			set_sensitivity(0);
+			<span style="color: #7E7E7E;">//light_switch(0);</span>
+
+			<span style="color: #7E7E7E;">//MATLAB's fgetl doesn't see EOF correctly with serial, so send</span>
+			<span style="color: #7E7E7E;">//an explicit indicator that there is no more data.</span>
+			<span style="color: #CC6600;"><b>Serial</b></span>.<span style="color: #CC6600;">print</span>(<span style="color: #006699;">"EOT\n"</span>);
+		}
+		<span style="color: #CC6600;">delay</span>(200);
+	}
+}
+
+</pre>
+
+</body>
+</html>

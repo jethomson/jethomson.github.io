@@ -1,0 +1,102 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>scripts/primary/make_master_dark_flat_bias.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">% This script processes light, flat, dark, and bias frames into master light,</span>
+0002 <span class="comment">% flat, dark, and bias frames. The master frames are saved as .mat files. A</span>
+0003 <span class="comment">% master bias frame is only necessary if you are interested in scaling a dark</span>
+0004 <span class="comment">% frame to better match the dark current in a light frame. The flat frame is</span>
+0005 <span class="comment">% demosaiced, desaturated (made gray), normalized, then re-mosaiced. The flat</span>
+0006 <span class="comment">% frame is demosaiced because it is easier to desaturate it in this form; it is</span>
+0007 <span class="comment">% re-mosaiced because it is less computationally intense to flat correct a light</span>
+0008 <span class="comment">% frame when it is still a Bayer raw.</span>
+0009 <span class="comment">%</span>
+0010 
+0011 initialize_spectrometer_workspace
+0012 
+0013 dir_lightdarks = [so.bd s <span class="string">'dark_frames'</span> s <span class="string">'light_darks'</span> s so.exposure s so.ftype];
+0014 dir_flatdarks = [so.bd s <span class="string">'dark_frames'</span> s <span class="string">'flat_darks'</span> s so.ftype];
+0015 dir_flats = [so.bd s <span class="string">'flat_frames'</span> s so.ftype];
+0016 dir_bias = [so.bd s <span class="string">'bias_frames'</span> s so.ftype];
+0017 
+0018 g = waitbar(0, [<span class="string">'Processing '</span> so.ftype <span class="string">' dark, flat, and bias frames. '</span> <span class="cont">...</span>
+0019                 <span class="string">'This may take several minutes.'</span>]);
+0020 waitbar(0.001, g); <span class="comment">% Octave's buggy waitbar doesn't like 0 or 1</span>
+0021 wblen = 6;
+0022 
+0023 waitbar(1/wblen, g);
+0024 dark = ensemble_average(dir_lightdarks);
+0025 waitbar(2/wblen, g);
+0026 
+0027 FD = ensemble_average(dir_flatdarks);
+0028 waitbar(3/wblen, g);
+0029 F = ensemble_average(dir_flats);
+0030 F = F - FD;
+0031 waitbar(4/wblen, g); <span class="comment">% finished processing darks and flats</span>
+0032 
+0033 <span class="keyword">if</span> strcmpi(so.ftype, <span class="string">'PGM'</span>)
+0034     F = bayer_demosaic(F); <span class="comment">% separate Bayer raw into channels</span>
+0035 
+0036     <span class="comment">% shift each channel's average gray level so that they are all the same,</span>
+0037     <span class="comment">% by using the green channel's gray level, mn(2), as a reference.</span>
+0038     mn = reshape(image_mean(F), [1 1 3]);
+0039     mn_shift = repmat(mn(2)-mn, [size(F,1), size(F,2), 1]);
+0040     Fgray = F + mn_shift;
+0041 
+0042     mx = max(Fgray(:));
+0043     Fnormal = Fgray./mx;
+0044     <span class="comment">% re-mosaic so flat frame correction can be performed on Bayer raws,</span>
+0045     <span class="comment">% which is less computationally intense.</span>
+0046     F = bayer_mosaic(Fnormal);
+0047 <span class="keyword">else</span>
+0048     <span class="comment">% shift each channel's average gray level so that they are all the same,</span>
+0049     <span class="comment">% by using the green channel's gray level, mn(2), as a reference.</span>
+0050     mn = reshape(image_mean(F), [1 1 3]);
+0051     mn_shift = repmat(mn(2)-mn, [size(F,1), size(F,2), 1]);
+0052     Fgray = F + mn_shift;
+0053 
+0054     mx = max(Fgray(:));
+0055     Fnormal = Fgray./mx;
+0056     F = Fnormal;
+0057 end
+0058 flat = F;
+0059 clear F FD Fgray Fnormal;
+0060 
+0061 bias = ensemble_average(dir_bias);
+0062 waitbar(5/wblen, g);
+0063 
+0064 <span class="comment">%save calibration frames</span>
+0065 [ign, pdirpath] = pop_dirname(dir_lightdarks);
+0066 [ign, pdirpath] = pop_dirname(pdirpath);
+0067 matname = [so.ftype <span class="string">'_master_dark_'</span> so.exposure <span class="string">'.mat'</span>];
+0068 save(<span class="string">'-V6'</span>, [pdirpath s matname], <span class="string">'dark'</span>);
+0069 
+0070 [ign, pdirpath] = pop_dirname(dir_flats);
+0071 matname = [so.ftype <span class="string">'_master_flat.mat'</span>];
+0072 save(<span class="string">'-V6'</span>, [pdirpath s matname], <span class="string">'flat'</span>);
+0073 
+0074 [ign, pdirpath] = pop_dirname(dir_bias);
+0075 matname = [so.ftype <span class="string">'_master_bias.mat'</span>];
+0076 save(<span class="string">'-V6'</span>, [pdirpath s matname], <span class="string">'bias'</span>);
+0077 
+0078 waitbar((6/wblen)-0.001, g);
+0079 
+0080 disp(<span class="string">''</span>)
+0081 disp([mfilename() <span class="string">' finished.'</span>])
+0082 clear all
+</pre>
+
+</body>
+</html>

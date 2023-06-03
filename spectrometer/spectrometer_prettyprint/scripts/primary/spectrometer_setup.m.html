@@ -1,0 +1,63 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>scripts/primary/spectrometer_setup.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">% Once you have preprocessed all your spectrographs you can begin turning them</span>
+0002 <span class="comment">% into spectrograms. When starting a new session, this script should be run</span>
+0003 <span class="comment">% first. It sets up several variables used by the other scripts to produce</span>
+0004 <span class="comment">% spectrograms.</span>
+0005 <span class="comment">%</span>
+0006 <span class="comment">%     so   : spectrometer object, a record containing information about the</span>
+0007 <span class="comment">%            set of spectrographs that are to be processed.</span>
+0008 <span class="comment">%  lambda  : the calibrated wavelength scale used for plotting spectrograms</span>
+0009 <span class="comment">%      L   : the length of lambda as well as the width of the images being</span>
+0010 <span class="comment">%            processed.</span>
+0011 <span class="comment">%</span>
+0012 
+0013 initialize_spectrometer_workspace
+0014 so.dir_light = [so.bd s <span class="string">'light_frames'</span> s so.exposure s so.sdate];
+0015 
+0016 disp([<span class="string">'*** Setting up workspace to produce spectrograms from '</span> so.ftype <span class="cont">...</span>
+0017       <span class="string">' spectrographs. ***'</span>]);
+0018 
+0019 <span class="comment">% load spectral reference spectrograph</span>
+0020 load([so.dir_light  s <span class="string">'reference'</span> s <span class="string">'spectral'</span> s so.ftype <span class="string">'_spectral_ref.mat'</span>]);
+0021 
+0022 <span class="comment">% converting from linear to sRGB will cause the peaks stand out making it easier</span>
+0023 <span class="comment">% to pick them out.</span>
+0024 <span class="keyword">if</span> strcmpi(so.ftype, <span class="string">'PGM'</span>)
+0025     max_level = 2^ceil(log2(max(spectral_ref(:)))) - 1;
+0026     <span class="comment">% because lin2sRGB expects the maximum level to be 255, an image with a</span>
+0027     <span class="comment">% a greater range of levels has to be scaled.</span>
+0028     spectral_ref = lin2sRGB((255/max_level)*spectral_ref);
+0029 end
+0030 
+0031 <span class="comment">% Look at CFL_Hg_peaks_labeled.png to see the numbered peaks and their</span>
+0032 <span class="comment">% wavelengths. The wavelengths are not given for the non-mercury peaks.</span>
+0033 <span class="comment">% Your camera might not capture peak number 1. You don't have to click</span>
+0034 <span class="comment">% exactly on the peak and only the x-coordinate of where you click matters.</span>
+0035 so.lambda = wavelength_calibrate(spectral_ref);
+0036 so.dlambda = mean(diff(so.lambda));
+0037 clear spectral_ref;
+0038 
+0039 so.L = length(so.lambda);
+0040 
+0041 access_spectrometer_object(so);
+0042 clear
+0043 disp([mfilename() <span class="string">' finished.'</span>])
+</pre>
+
+</body>
+</html>

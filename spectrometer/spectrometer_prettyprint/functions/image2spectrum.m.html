@@ -1,0 +1,117 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>functions/image2spectrum.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%IMAGE2SPECTRUM - Converts a photograph of refracted light (a spectrograph)</span>
+0002 <span class="comment">%                 into a column array or a matrix of three column arrays of</span>
+0003 <span class="comment">%                 data points that represent the light's spectrum (a</span>
+0004 <span class="comment">%                 spectrogram).</span>
+0005 <span class="comment">%</span>
+0006 <span class="comment">% It's not necessary to use every row of a spectrograph to derive the</span>
+0007 <span class="comment">% spectrogram. Although every column is always used. To specify a horizontal</span>
+0008 <span class="comment">% slice (region of interest), use the optional argument roi.</span>
+0009 <span class="comment">%</span>
+0010 <span class="comment">% Syntax:  Z = image2spectrum(img, color, roi)</span>
+0011 <span class="comment">%</span>
+0012 <span class="comment">% Inputs:</span>
+0013 <span class="comment">%    img   - an image matrix or an image's filename.</span>
+0014 <span class="comment">%    color - valid arguments are 'gray' and 'rgb'. If 'rgb' is given then Z</span>
+0015 <span class="comment">%            is returned as a matrix of three column vectors, with the</span>
+0016 <span class="comment">%            columns being separate red, green, and blue spectrograms. If</span>
+0017 <span class="comment">%            'gray' is given, a single spectrogram that is the average of the</span>
+0018 <span class="comment">%            red, green and blue spectrograms is returned. If a grayscale</span>
+0019 <span class="comment">%            image is given, while color is set to 'rgb' a gray spectrogram</span>
+0020 <span class="comment">%            is still returned. default is 'rgb'</span>
+0021 <span class="comment">%    roi   - region of interest of spectrograph to process.</span>
+0022 <span class="comment">%            roi(1), y0 is the first row of the horizontal slice. default: 1.</span>
+0023 <span class="comment">%            roi(2), h is the height of the region, the final row is y0+h-1.</span>
+0024 <span class="comment">%            default: image height.</span>
+0025 <span class="comment">%</span>
+0026 <span class="comment">% Outputs:</span>
+0027 <span class="comment">%    Z - a column array or a matrix of three column arrays of data points</span>
+0028 <span class="comment">%        that represent the photographed light's spectrum (a spectrogram).</span>
+0029 <span class="comment">%</span>
+0030 <span class="comment">% Example:</span>
+0031 <span class="comment">%    Z = image2spectrum('path/filename');</span>
+0032 <span class="comment">%    h=100; y0=(size(I,1)-h)/2; Z=image2spectrum(I, 'gray', [y0, h]);</span>
+0033 <span class="comment">%</span>
+0034 <span class="comment">% Other m-files required: frame_read</span>
+0035 <span class="comment">% Subfunctions: none</span>
+0036 <span class="comment">% MAT-files required: none</span>
+0037 <span class="comment">%</span>
+0038 <span class="comment">% See also: WAVELENGTH_CALIBRATE</span>
+0039 <span class="comment">%</span>
+0040 <span class="comment">% Author: Jonathan Thomson</span>
+0041 <span class="comment">% Work:</span>
+0042 <span class="comment">% email:</span>
+0043 <span class="comment">% Website: http://jethomson.wordpress.com</span>
+0044 <span class="comment">%</span>
+0045 
+0046 function Z = image2spectrum(img, color, roi)
+0047 
+0048     <span class="keyword">if</span> (nargin &lt; 1 || nargin &gt; 3 || isempty(img))
+0049         usage(<span class="string">'image2spectrum(img, color, roi)'</span>);
+0050     end
+0051 
+0052     <span class="keyword">if</span> (ischar(img) == 1)
+0053         I = frame_read(img);
+0054     <span class="keyword">else</span>
+0055         I = double(img);
+0056     end
+0057 
+0058     <span class="keyword">if</span> (~exist(<span class="string">'color'</span>,<span class="string">'var'</span>) || isempty(color))
+0059         color = <span class="string">'rgb'</span>;
+0060     end
+0061 
+0062     <span class="keyword">if</span> (~exist(<span class="string">'roi'</span>,<span class="string">'var'</span>) || isempty(roi))
+0063         roi = [0, 0];
+0064     end
+0065 
+0066 
+0067 
+0068     <span class="keyword">if</span> (roi(1) == 0)
+0069         roi(1) = 1;
+0070     end
+0071 
+0072     <span class="keyword">if</span> (length(roi) &lt; 2 || roi(2) == 0)
+0073         roi(2) = size(I,1);
+0074     end
+0075 
+0076     y0 = roi(1);
+0077     h = roi(2);
+0078 
+0079     S = I(y0:y0+(h-1), :, :);
+0080 
+0081     <span class="comment">% The averaging function must be explicitly told to average columnwise</span>
+0082     <span class="comment">% by being passed 1 as the second argument. This prevents incorrectly</span>
+0083     <span class="comment">% averaging a vector when h is 1.</span>
+0084     <span class="comment">% If img is the result of averaging many images then mean and median produce</span>
+0085     <span class="comment">% nearly the same result. median should reduce the effect of hot pixels</span>
+0086     <span class="comment">% better than mean. However, if img is a single image then mean produces a</span>
+0087     <span class="comment">% a more accurate spectrum.</span>
+0088     Z = mean(S, 1);
+0089     <span class="comment">%Z = median(S, 1); % ignores hot pixels.</span>
+0090 
+0091     Z = reshape(Z, [size(Z, 2), size(Z, 3)]); <span class="comment">%from 1xwidthx3 to widthx3</span>
+0092 
+0093     <span class="keyword">if</span> (strcmpi(color,<span class="string">'gray'</span>) || strcmpi(color,<span class="string">'grey'</span>))
+0094         Z = mean(Z, 2);
+0095     end
+0096 
+0097 end
+</pre>
+
+</body>
+</html>

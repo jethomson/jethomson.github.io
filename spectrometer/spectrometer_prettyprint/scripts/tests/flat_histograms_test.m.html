@@ -1,0 +1,158 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>scripts/tests/flat_histograms_test.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">% Simple script to plot the RGB histogram of a flat to examine the color balance</span>
+0002 <span class="comment">% and the effects of normalizing each channel. Use saturation_test to make sure</span>
+0003 <span class="comment">% your flats aren't saturated. Good flats will peak between 1/3 and 2/3 of the</span>
+0004 <span class="comment">% range defined by the saturation point minus the black point.</span>
+0005 
+0006 s = filesep;
+0007 
+0008 ftype = <span class="string">'PGM'</span>;
+0009 <span class="keyword">if</span> strcmpi(ftype, <span class="string">'JPG'</span>)
+0010     bn = 0:255;
+0011 <span class="keyword">elseif</span> strcmpi(ftype, <span class="string">'PGM'</span>)
+0012     BFP = <span class="string">'gbrg'</span>;
+0013     bn = 0:1023;
+0014 end
+0015 
+0016 <span class="comment">% hot pixels must be removed by dark frame subtraction for normalization</span>
+0017 <span class="comment">% (dividing by the max of each channel) to work correctly</span>
+0018 dl = list_dir([<span class="string">'data/A590/tests/flat_cast/dark'</span>], ftype, 3);
+0019 dark = ensemble_average(dl{1});
+0020 dl = list_dir(<span class="string">'data/A590/tests/flat_cast/magenta'</span>, ftype, 3);
+0021 F = ensemble_average(dl{1}) - dark;
+0022 
+0023 <span class="keyword">if</span> strcmpi(ftype, <span class="string">'PGM'</span>)
+0024     F = bayer_demosaic(F, BFP);
+0025 end
+0026 
+0027 <span class="comment">% shift each channel's average gray level so that they are all the same,</span>
+0028 <span class="comment">% by using the green channel's gray level, mn(2), as a reference.</span>
+0029 mn = reshape(image_mean(F), [1 1 3]);
+0030 mn_shift = repmat(mn(2)-mn, [size(F,1), size(F,2), 1]);
+0031 Fgray = F + mn_shift;
+0032 
+0033 mx = max(Fgray(:));
+0034 Fnormal = Fgray./mx;
+0035 
+0036 format short g
+0037 mF = image_mean(F)
+0038 mFnormal = image_mean(Fnormal)
+0039 format
+0040 
+0041 
+0042 <span class="comment">%%%</span>
+0043 Fr = F(:,:,1);
+0044 Fg = F(:,:,2);
+0045 Fb = F(:,:,3);
+0046 clear F;
+0047 
+0048 a = [300 700 0 215000];
+0049 <span class="comment">%a = [0 bn(end) 0 215000];</span>
+0050 figure
+0051 subplot(311)
+0052 [n1r, xx1] = hist(Fr(:), bn);
+0053 bar(xx1, n1r)
+0054 axis(a)
+0055 grid on
+0056 title(<span class="string">'Red'</span>)
+0057 
+0058 subplot(312)
+0059 [n1g, xx] = hist(Fg(:), bn);
+0060 bar(xx, n1g)
+0061 axis(a)
+0062 grid on
+0063 title(<span class="string">'Green'</span>)
+0064 
+0065 subplot(313)
+0066 [n1b, xx] = hist(Fb(:), bn);
+0067 bar(xx, n1b)
+0068 axis(a)
+0069 grid on
+0070 title(<span class="string">'Blue'</span>)
+0071 
+0072 clear Fr Fg Fb;
+0073 
+0074 <span class="comment">%%%</span>
+0075 Fgr = Fgray(:,:,1);
+0076 Fgg = Fgray(:,:,2);
+0077 Fgb = Fgray(:,:,3);
+0078 clear Fgray;
+0079 
+0080 a = [300 700 0 215000];
+0081 <span class="comment">%a = [0 bn(end) 0 215000];</span>
+0082 figure
+0083 subplot(311)
+0084 [n2r, xx] = hist(Fgr(:), bn);
+0085 bar(xx, n2r)
+0086 axis(a)
+0087 grid on
+0088 title(<span class="string">'Red'</span>)
+0089 
+0090 subplot(312)
+0091 [n2g, xx] = hist(Fgg(:), bn);
+0092 bar(xx, n2g)
+0093 axis(a)
+0094 grid on
+0095 title(<span class="string">'Green'</span>)
+0096 
+0097 subplot(313)
+0098 [n2b, xx] = hist(Fgb(:), bn);
+0099 bar(xx, n2b)
+0100 axis(a)
+0101 grid on
+0102 title(<span class="string">'Blue'</span>)
+0103 
+0104 clear Fgr Fgg Fgb;
+0105 
+0106 <span class="comment">%%%</span>
+0107 <span class="keyword">if</span> (false)
+0108     <span class="comment">% The histograms for Fnormal should be the same shape as Fgray; however since</span>
+0109     <span class="comment">% the bin width is so small quantization error results in the histograms</span>
+0110     <span class="comment">% having spikes and dips (comb effect). Averaging several flats together will</span>
+0111     <span class="comment">% reduce this effect.</span>
+0112     Fnr = Fnormal(:,:,1);
+0113     Fng = Fnormal(:,:,2);
+0114     Fnb = Fnormal(:,:,3);
+0115 
+0116     a = [0 1 0 125000 0 1];
+0117     figure
+0118     subplot(311)
+0119     [n2r, xx] = hist(Fnr(:), bn/bn(end));
+0120     bar(xx, n2r)
+0121     axis(a)
+0122     grid on
+0123     title(<span class="string">'Red'</span>)
+0124 
+0125     subplot(312)
+0126     [n2g, xx] = hist(Fng(:), bn/bn(end));
+0127     bar(xx, n2g)
+0128     axis(a)
+0129     grid on
+0130     title(<span class="string">'Green'</span>)
+0131 
+0132     subplot(313)
+0133     [n2b, xx] = hist(Fnb(:), bn/bn(end));
+0134     bar(xx, n2b)
+0135     axis(a)
+0136     grid on
+0137     title(<span class="string">'Blue'</span>)
+0138 end
+</pre>
+
+</body>
+</html>

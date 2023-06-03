@@ -1,0 +1,168 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>scripts/examples/example01_cyan_LED_spectrogram_not_preprocessed.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%</span>
+0002 <span class="comment">% This example script demonstrates various ways to use the spectrometer</span>
+0003 <span class="comment">% functions to produce spectrograms without using preprocessed spectrographs.</span>
+0004 <span class="comment">%</span>
+0005 
+0006 example = <span class="string">'b'</span>;
+0007 
+0008 switch example
+0009 
+0010 <span class="comment">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+0011 <span class="comment">% This is the simplest way to use the spectrometer code. It neglects most of the</span>
+0012 <span class="comment">% code's features; features which result in better spectrograms being produced.</span>
+0013 <span class="comment">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+0014 <span class="keyword">case</span> <span class="string">'a'</span>
+0015     s = filesep;
+0016     Hg_fname = [<span class="string">'data'</span> s <span class="string">'A590'</span> s <span class="string">'frames'</span> s <span class="string">'light_frames'</span> s <span class="string">'2s'</span> s <span class="cont">...</span>
+0017                 <span class="string">'2012_08_30'</span> s <span class="string">'reference'</span> s <span class="string">'spectral'</span> s <span class="string">'PGM'</span> s <span class="string">'HG_REF.PGM'</span>];
+0018     cyan_fname = [<span class="string">'data'</span> s <span class="string">'A590'</span> s <span class="string">'frames'</span> s <span class="string">'light_frames'</span> s <span class="string">'2s'</span> s <span class="cont">...</span>
+0019                   <span class="string">'2012_08_30'</span> s <span class="string">'spectrographs'</span> s <span class="string">'Cyan_LED_3'</span> s <span class="cont">...</span>
+0020                   <span class="string">'e0'</span> s <span class="string">'PGM'</span> s <span class="string">'CYAN01.PGM'</span>];
+0021     bfp = <span class="string">'gbrg'</span>;
+0022     access_bayer_pattern(bfp); <span class="comment">% set Bayer filter pattern</span>
+0023 
+0024     lambda = wavelength_calibrate(Hg_fname);
+0025 
+0026     cyan = bayer_demosaic(cyan_fname, bfp, true);
+0027     Z = image2spectrum(cyan, <span class="string">'rgb'</span>);
+0028 
+0029     figure
+0030     <span class="comment">% plot usually plots blue, then green, then red, so flip the data so the</span>
+0031     <span class="comment">% red channel is red, green is green, and blue is blue.</span>
+0032     plot(lambda, fliplr(Z))
+0033     xlabel(<span class="string">'wavelength [nm]'</span>)
+0034     title(<span class="string">'simple spectrogram'</span>)
+0035 
+0036 
+0037 <span class="comment">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+0038 <span class="comment">% This example demonstrates producing an RGB spectrograms from a single raw</span>
+0039 <span class="comment">% spectrograph that has been cropped but not dark and flat frame corrected.</span>
+0040 <span class="comment">% It also shows how to construct a path to spectrograms in a more systematic</span>
+0041 <span class="comment">% way.</span>
+0042 <span class="comment">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+0043 <span class="keyword">case</span> <span class="string">'b'</span>
+0044     s = filesep;
+0045 
+0046     <span class="comment">% create spectrometer dataset record</span>
+0047     so.cam = <span class="string">'A590'</span>;
+0048     so.ftype = <span class="string">'PGM'</span>;
+0049     so.exposure = <span class="string">'2s'</span>;
+0050     so.sdate = <span class="string">'2012_08_30'</span>;
+0051     so.bfp = <span class="string">'gbrg'</span>;
+0052     access_bayer_pattern(so.bfp);
+0053     so.bd = [<span class="string">'data'</span> s so.cam s <span class="string">'frames'</span>]; <span class="comment">% base directory</span>
+0054     access_spectrometer_object(so);
+0055 
+0056     so.dir_light = [so.bd s <span class="string">'light_frames'</span> s so.exposure s so.sdate];
+0057     y0 = 1175; <span class="comment">% You can determine a good y0 by visually inspecting the</span>
+0058                <span class="comment">% spectrograph. Since the Bayer filter pattern is 2x2,</span>
+0059                <span class="comment">% y0 should be odd because the filter pattern repeats</span>
+0060                <span class="comment">% every odd numbered row.</span>
+0061     h = 500; <span class="comment">% height of region of interest</span>
+0062 
+0063     Hg_fname = [so.dir_light s <span class="string">'reference'</span> s <span class="string">'spectral'</span> s <span class="string">'PGM'</span> s <span class="string">'HG_REF.PGM'</span>];
+0064 
+0065     so.lambda = wavelength_calibrate(Hg_fname, [y0, h]);
+0066     cyan_dir = [so.dir_light s <span class="string">'spectrographs'</span> s <span class="string">'Cyan_LED_3'</span> s <span class="string">'e0'</span> s <span class="string">'PGM'</span>];
+0067     fl = list_dir(cyan_dir, <span class="string">'*.PGM'</span>, 1);
+0068     cyan = bayer_demosaic(fl{1}, so.bfp, true);
+0069 
+0070     <span class="comment">% you could also load an image like this</span>
+0071     <span class="comment">%D = dir([cyan_dir s '*.PGM']);</span>
+0072     <span class="comment">%fl = {D.name};</span>
+0073     <span class="comment">%cyan_fname = [cyan_dir s fl{1}];</span>
+0074     <span class="comment">%cyan = bayer_demosaic(cyan_fname);</span>
+0075 
+0076     Z = image2spectrum(cyan, <span class="string">'rgb'</span>, [y0, h]);
+0077 
+0078     figure
+0079     plot(so.lambda, fliplr(Z))
+0080     a = axis;
+0081     axis([so.lambda(1) so.lambda(end) a(3) a(4)])
+0082     xlabel(<span class="string">'wavelength [nm]'</span>)
+0083     legend(<span class="string">'red channel'</span>, <span class="string">'green channel'</span>, <span class="string">'blue channel'</span>)
+0084     title(<span class="string">'spectrogram from single image'</span>);
+0085 
+0086 
+0087 <span class="comment">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+0088 <span class="comment">% This example demonstrates producing RGB spectrograms from an ensemble of raw</span>
+0089 <span class="comment">% spectrographs by averaging, cropping, and performing (simulated) dark and</span>
+0090 <span class="comment">% flat frame correction.</span>
+0091 <span class="comment">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+0092 <span class="keyword">case</span> <span class="string">'c'</span>
+0093     initialize_spectrometer_workspace
+0094     so.dir_light = [so.bd s <span class="string">'light_frames'</span> s so.exposure s so.sdate];
+0095     y0 = 1175; <span class="comment">% first row of ROI</span>
+0096     h = 500; <span class="comment">% height of region of interest</span>
+0097 
+0098     <span class="comment">%load([so.bd s 'dark_frames' s 'light_darks' s so.ftype ...</span>
+0099     <span class="comment">%      '_master_dark_' so.exposure '.mat']);</span>
+0100     <span class="comment">%load([so.bd s 'flat_frames' s so.ftype '_master_flat.mat']);</span>
+0101 
+0102     <span class="comment">% Simulated dark and flat frames. These values won't change anything.</span>
+0103     dark = 0;
+0104     flat = 1;
+0105 
+0106     Hg_dir = [so.dir_light s <span class="string">'reference'</span> s <span class="string">'spectral'</span> s so.ftype];
+0107     Hg = ensemble_average(Hg_dir);
+0108 
+0109     Hg = Hg - dark;
+0110     Hg = flat_correct(Hg, flat);
+0111     Hg = crop_image(Hg, [y0, h]);
+0112     Hg = bayer_demosaic(Hg, so.bfp, true);
+0113     lambda = wavelength_calibrate(Hg);
+0114 
+0115     cyan_dir = [so.dir_light s <span class="string">'spectrographs'</span> s <span class="string">'Cyan_LED_3'</span> s <span class="string">'e0'</span> s <span class="string">'PGM'</span>];
+0116     cyan = ensemble_average(cyan_dir);
+0117     cyan = cyan - dark;
+0118     cyan = flat_correct(cyan, flat);
+0119     cyan = crop_image(cyan, [y0, h]);
+0120     cyan = bayer_demosaic(cyan, so.bfp, true);
+0121     Z = image2spectrum(cyan, <span class="string">'rgb'</span>);
+0122 
+0123     figure, hold on
+0124     plot(lambda, fliplr(Z))
+0125     Zgray = merge_RGB_spectrums(Z);
+0126     plot(lambda, Zgray, <span class="string">'k'</span>)
+0127 
+0128     [pk, l] = max(Z);
+0129     pw = lambda(l);
+0130     plot(pw, pk, <span class="string">'y*'</span>)
+0131     disp(<span class="string">'Datasheet peak wavelength: 505nm'</span>);
+0132     fprintf([<span class="string">'Measured peak wavelength: Red=%.2fnm, Green=%.2fnm,'</span> <span class="cont">...</span>
+0133              <span class="string">'Blue=%.2fnm\n'</span>], pw);
+0134 
+0135     [pk, l] = max(Zgray);
+0136     pw = lambda(l);
+0137     plot(pw, pk, <span class="string">'y*'</span>)
+0138     fprintf(<span class="string">'Measured peak wavelength: Gray=%.2fnm\n'</span>, pw);
+0139 
+0140     a = axis;
+0141     axis([lambda(1) lambda(end) a(3) a(4)])
+0142     xlabel(<span class="string">'wavelength [nm]'</span>)
+0143     legend(<span class="string">'red channel'</span>, <span class="string">'green channel'</span>, <span class="string">'blue channel'</span>, <span class="string">'channels averaged'</span>)
+0144     title(<span class="string">'spectrogram from ensemble'</span>);
+0145 
+0146 otherwise
+0147 
+0148 end
+</pre>
+
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>./TSL2561_data_acquisition/serial_open.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%SERIAL_OPEN - Opens the device file supplied as the argument &quot;port&quot; for</span>
+0002 <span class="comment">%              serial communication in the manner required by GNU Octave</span>
+0003 <span class="comment">%              or MATLAB.</span>
+0004 <span class="comment">%</span>
+0005 <span class="comment">% GNU Octave and MATLAB handle opening a serial port differently. This function</span>
+0006 <span class="comment">% detects which environment it is in and opens the serial port accordingly.</span>
+0007 <span class="comment">%</span>
+0008 <span class="comment">% Syntax:  sp = serial_open(port)</span>
+0009 <span class="comment">%</span>
+0010 <span class="comment">% Inputs:</span>
+0011 <span class="comment">%    port - the device file or communications port</span>
+0012 <span class="comment">%</span>
+0013 <span class="comment">% Outputs:</span>
+0014 <span class="comment">%    sp - the handle for sending and receiving data over the serial port</span>
+0015 <span class="comment">%</span>
+0016 <span class="comment">% Example:</span>
+0017 <span class="comment">%    sp = serial_open('/dev/ttyUSB0'); % UNIX like systems</span>
+0018 <span class="comment">%    sp = serial_open('C0M9'); % Windows</span>
+0019 <span class="comment">%</span>
+0020 <span class="comment">%</span>
+0021 <span class="comment">% Other m-files required: none</span>
+0022 <span class="comment">% Subfunctions: none</span>
+0023 <span class="comment">% MAT-files required: none</span>
+0024 <span class="comment">%</span>
+0025 <span class="comment">% See also:</span>
+0026 <span class="comment">%</span>
+0027 <span class="comment">% Author: Jonathan Thomson</span>
+0028 <span class="comment">% Work:</span>
+0029 <span class="comment">% email:</span>
+0030 <span class="comment">% Website: http://jethomson.wordpress.com</span>
+0031 <span class="comment">%</span>
+0032 <span class="comment">%</span>
+0033 <span class="comment">% MATLAB terminator notes:</span>
+0034 <span class="comment">% Additionally, you can set Terminator to a 1-by-2 cell array. The first element</span>
+0035 <span class="comment">% of the cell is the read terminator and the second element of the cell array is </span>
+0036 <span class="comment">% the write terminator.</span>
+0037 <span class="comment">% When performing a write operation using the fprintf function, all occurrences </span>
+0038 <span class="comment">% of \n are replaced with the Terminator value. Note that %s\n is the default</span>
+0039 <span class="comment">% format for fprintf. A read operation with fgetl, fgets, or fscanf completes</span>
+0040 <span class="comment">% when the Terminator value is read. The terminator is ignored for binary</span>
+0041 <span class="comment">% operations.</span>
+0042 <span class="comment">% Source: http://www.mathworks.com/help/toolbox/instrument/terminator.html</span>
+0043 
+0044 
+0045 
+0046 function sp = serial_open(port)
+0047 
+0048     BOOTLOADER_PAUSE_TIME = 3; <span class="comment">% seconds</span>
+0049 
+0050     fprintf(<span class="string">'Opening serial port. '</span>);
+0051 
+0052     <span class="keyword">if</span> exist(<span class="string">'OCTAVE_VERSION'</span>)
+0053         sp = fopen(port, <span class="string">'r+'</span>);
+0054     <span class="keyword">else</span>
+0055         <span class="comment">% Terminator values are line feed ('\n') when receiving data</span>
+0056         <span class="comment">% and nothing (no terminator) when sending data.</span>
+0057         sp = serial(port, <span class="string">'BaudRate'</span>, 9600, <span class="cont">...</span>
+0058                     <span class="string">'Terminator'</span>, {<span class="string">'LF'</span>, <span class="string">''</span>});
+0059         fopen(sp);
+0060     end
+0061     <span class="comment">% opening the serial port in MATLAB causes the uc to reset.</span>
+0062     <span class="comment">% pause to allow the bootloader to timeout.</span>
+0063     fprintf(<span class="string">'Pausing for bootloader. '</span>);
+0064     pause(BOOTLOADER_PAUSE_TIME);
+0065     disp(<span class="string">'Done.'</span>)
+0066 end
+</pre>
+
+</body>
+</html>

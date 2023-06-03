@@ -1,0 +1,69 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>functions/frame_read.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%FRAME_READ - A wrapper function for bayer_demosaic and myimread.</span>
+0002 <span class="comment">%</span>
+0003 <span class="comment">% If the image's file extension matches the file type specified in the constant</span>
+0004 <span class="comment">% BAYER_RAW_FTYPE, then the image data will be read, demosaiced, and returned.</span>
+0005 <span class="comment">% Otherwise, the image will be read and returned. This function allows cleaner</span>
+0006 <span class="comment">% code to be written because it allows one function call to read regular images</span>
+0007 <span class="comment">% and Bayer raw images.</span>
+0008 <span class="comment">%</span>
+0009 <span class="comment">% Syntax:  I = frame_read(fname)</span>
+0010 <span class="comment">%</span>
+0011 <span class="comment">% Inputs:</span>
+0012 <span class="comment">%    fname - an image's filename</span>
+0013 <span class="comment">%</span>
+0014 <span class="comment">% Outputs:</span>
+0015 <span class="comment">%    I - a matrix representing the contents of the image pointed to by fname.</span>
+0016 <span class="comment">%</span>
+0017 <span class="comment">% Example:</span>
+0018 <span class="comment">%</span>
+0019 <span class="comment">%</span>
+0020 <span class="comment">% Other m-files required: bayer_demosaic, myimread</span>
+0021 <span class="comment">% Subfunctions: none</span>
+0022 <span class="comment">% MAT-files required: none</span>
+0023 <span class="comment">%</span>
+0024 <span class="comment">% See also: BAYER_DEMOSAIC, MYIMREAD</span>
+0025 <span class="comment">%</span>
+0026 <span class="comment">% Author: Jonathan Thomson</span>
+0027 <span class="comment">% Work:</span>
+0028 <span class="comment">% email:</span>
+0029 <span class="comment">% Website: http://jethomson.wordpress.com</span>
+0030 <span class="comment">%</span>
+0031 
+0032 function I = frame_read(fname)
+0033 
+0034     <span class="comment">% Change this to the file format of your Bayer raws.</span>
+0035     <span class="comment">% You may need to write a function to read your raw file's format.</span>
+0036     BAYER_RAW_FTYPE = <span class="string">'.PGM'</span>;
+0037 
+0038     <span class="keyword">if</span> (nargin ~= 1 || isempty(fname))
+0039         usage(<span class="string">'frame_read(fname)'</span>);
+0040     end
+0041 
+0042     [ign, ign, ext] = fileparts(fname);
+0043 
+0044     <span class="keyword">if</span> strcmpi(ext, BAYER_RAW_FTYPE)
+0045         I = bayer_demosaic(fname);
+0046     <span class="keyword">else</span>
+0047         I = myimread(fname);
+0048     end
+0049 end
+</pre>
+
+</body>
+</html>

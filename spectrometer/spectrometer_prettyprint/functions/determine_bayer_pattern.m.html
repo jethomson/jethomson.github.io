@@ -1,0 +1,136 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>functions/determine_bayer_pattern.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%DETERMINE_BAYER_PATTERN - Searches a Bayer raw image of a RED subject that</span>
+0002 <span class="comment">%                          fills the entire frame to determine the Bayer filter</span>
+0003 <span class="comment">%                          pattern of img.</span>
+0004 <span class="comment">%</span>
+0005 <span class="comment">% Note that dcraw will tell you the bayer filter pattern of a digital negative,</span>
+0006 <span class="comment">% therefore this function is not required to process spectrographs. It was</span>
+0007 <span class="comment">% mostly written for fun.</span>
+0008 <span class="comment">%</span>
+0009 <span class="comment">% Traverses img diagonally examining 2x2 blocks of colored filters to</span>
+0010 <span class="comment">% determine the image's Bayer filter pattern by finding the most intense</span>
+0011 <span class="comment">% (red) and least intense (blue) pixels. The ascii drawing below</span>
+0012 <span class="comment">% demonstrates a diagonal traversal starting at S (start) with a number of</span>
+0013 <span class="comment">% repetitions (rep) equal to 5. start need not be the upper leftmost corner</span>
+0014 <span class="comment">% of the image.</span>
+0015 <span class="comment">%</span>
+0016 <span class="comment">%     S  S  S  S  S</span>
+0017 <span class="comment">%        +  +  +  +</span>
+0018 <span class="comment">%        1  2  3  4</span>
+0019 <span class="comment">%S   [*][*][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]</span>
+0020 <span class="comment">%S+1 [*][*][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]</span>
+0021 <span class="comment">%S+2 [ ][ ][*][*][ ][ ][ ][ ][ ][ ][ ][ ][ ]</span>
+0022 <span class="comment">%S+3 [ ][ ][*][*][ ][ ][ ][ ][ ][ ][ ][ ][ ]</span>
+0023 <span class="comment">%    [ ][ ][ ][ ][*][*][ ][ ][ ][ ][ ][ ][ ]</span>
+0024 <span class="comment">%    [ ][ ][ ][ ][*][*][ ][ ][ ][ ][ ][ ][ ]</span>
+0025 <span class="comment">%    [ ][ ][ ][ ][ ][ ][*][*][ ][ ][ ][ ][ ]</span>
+0026 <span class="comment">%    [ ][ ][ ][ ][ ][ ][*][*][ ][ ][ ][ ][ ]</span>
+0027 <span class="comment">%    [ ][ ][ ][ ][ ][ ][ ][ ][*][*][ ][ ][ ]</span>
+0028 <span class="comment">%    [ ][ ][ ][ ][ ][ ][ ][ ][*][*][ ][ ][ ]</span>
+0029 <span class="comment">%    [ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]</span>
+0030 <span class="comment">%    [ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]</span>
+0031 <span class="comment">%</span>
+0032 <span class="comment">% Syntax:  pattern = determine_bayer_pattern(img, start, rep)</span>
+0033 <span class="comment">%</span>
+0034 <span class="comment">% Inputs:</span>
+0035 <span class="comment">%    img   - Bayer raw image's filename or an image matrix.</span>
+0036 <span class="comment">%    start - The row and column of the pixel from which the traversing of</span>
+0037 <span class="comment">%            the image in 2x2 blocks begins. The row and column are always</span>
+0038 <span class="comment">%            the same so only one number is needed. start must be odd. If</span>
+0039 <span class="comment">%            start is 1 the traversal will begin at the upper leftmost</span>
+0040 <span class="comment">%            pixel. It is recommended you specify start such that blocks</span>
+0041 <span class="comment">%            away from the borders of image are examined. default: 21.</span>
+0042 <span class="comment">%    rep   - The number of blocks to examine. The more blocks that are found</span>
+0043 <span class="comment">%            to be in agreement the higher the probability that you have</span>
+0044 <span class="comment">%            have the correct Bayer pattern. default: 5.</span>
+0045 <span class="comment">%</span>
+0046 <span class="comment">% Outputs:</span>
+0047 <span class="comment">%    pattern - The Bayer filter pattern of img. If rep is greater than one</span>
+0048 <span class="comment">%              and all the blocks examined are not in agreement then pattern</span>
+0049 <span class="comment">%              will be nonsense.</span>
+0050 <span class="comment">%    pp - A matrix of the Bayer filter patterns found in each block. They</span>
+0051 <span class="comment">%         should all agree. If they don't try increasing start.</span>
+0052 <span class="comment">%</span>
+0053 <span class="comment">% Example:</span>
+0054 <span class="comment">%    [pattern, pp] = determine_bayer_pattern('path/myfilename.PGM', 21, 5)</span>
+0055 <span class="comment">%</span>
+0056 <span class="comment">% Other m-files required: myimread</span>
+0057 <span class="comment">% Subfunctions: none</span>
+0058 <span class="comment">% MAT-files required: none</span>
+0059 <span class="comment">%</span>
+0060 <span class="comment">% See also: NONE</span>
+0061 
+0062 <span class="comment">% Author: Jonathan Thomson</span>
+0063 <span class="comment">% Work:</span>
+0064 <span class="comment">% email:</span>
+0065 <span class="comment">% Website: http://jethomson.wordpress.com</span>
+0066 <span class="comment">%</span>
+0067 
+0068 function [pattern, pp] = determine_bayer_pattern(img, start, rep)
+0069 
+0070     <span class="keyword">if</span> (nargin &lt; 1 || nargin &gt; 3 || isempty(img))
+0071         usage(<span class="string">'determine_bayer_pattern(img, start, rep)'</span>);
+0072     end
+0073 
+0074     <span class="keyword">if</span> (~exist(<span class="string">'start'</span>,<span class="string">'var'</span>) || isempty(start))
+0075         start = 21;
+0076     end
+0077 
+0078     <span class="keyword">if</span> (~exist(<span class="string">'rep'</span>,<span class="string">'var'</span>) || isempty(rep))
+0079         rep = 5;
+0080     end
+0081 
+0082     <span class="keyword">if</span> (rem(start,2) == 0)
+0083         error(<span class="string">'determine_bayer_pattern: parameter start must be odd.'</span>);
+0084     end
+0085 
+0086     <span class="keyword">if</span> ischar(img)
+0087         I = myimread(img);
+0088     <span class="keyword">else</span>
+0089         I = double(img);
+0090     end
+0091 
+0092     S = start; <span class="comment">% Coordinates of starting pixel. Must be odd.</span>
+0093     N = rep; <span class="comment">% Number of blocks to examine.</span>
+0094 
+0095     pp = repmat([<span class="string">'g'</span> <span class="string">'g'</span> <span class="string">'g'</span> <span class="string">'g'</span>], [N, 1]);
+0096     d = 2*(0:N-1);
+0097     for li = 1:N
+0098         B = reshape(I([S+d(li) S+d(li)+1], [S+d(li) S+d(li)+1]).', [4 1]);
+0099         [ign, mj] = max(B); <span class="comment">% red will have max intensity</span>
+0100         [ign, mk] = min(B); <span class="comment">% blue will have min intensity</span>
+0101         <span class="keyword">if</span> (mj ~= mk &amp;&amp; length(mj) == 1 &amp;&amp; length(mk) == 1)
+0102             pp(li,mj) = <span class="string">'r'</span>;
+0103             pp(li,mk) = <span class="string">'b'</span>;
+0104         end
+0105     end
+0106     pattern = char( mean(uint8(pp), 1) );
+0107 
+0108     c = isempty(strfind(pattern, <span class="string">'r'</span>)) || isempty(strfind(pattern, <span class="string">'g'</span>))<span class="cont">...</span>
+0109         || isempty(strfind(pattern, <span class="string">'b'</span>));
+0110     <span class="keyword">if</span>(c == 1)
+0111         pattern = -1;
+0112         disp([<span class="string">'determine_bayer_pattern: unable to find a valid'</span> <span class="cont">...</span>
+0113               <span class="string">'Bayer pattern.'</span>]);
+0114     end
+0115 
+0116 end
+</pre>
+
+</body>
+</html>

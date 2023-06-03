@@ -1,0 +1,156 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>scripts/primary/batch_preprocess.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">% This script turns a set of spectrographs into averaged, corrected, and</span>
+0002 <span class="comment">% cropped spectrographs and saves them as mat files. This script only</span>
+0003 <span class="comment">% needs to run once on a new set of images. Once those images have been</span>
+0004 <span class="comment">% processed you should work with the resulting mat files. This prevents</span>
+0005 <span class="comment">% lots of extra computation from reprocessing the image files every time</span>
+0006 <span class="comment">% you wish to produce a spectrogram. However, the source images remain</span>
+0007 <span class="comment">% unchanged and the functions are capable of processing them if for some</span>
+0008 <span class="comment">% reason you want to process them individually with your own scripts,</span>
+0009 <span class="comment">% for an example of this see:</span>
+0010 <span class="comment">% examples/example01_cyan_LED_spectrogram_not_preprocessed.m</span>
+0011 <span class="comment">%</span>
+0012 <span class="comment">% The region of interest (roi) is the region a spectrograph is cropped to.</span>
+0013 
+0014 initialize_spectrometer_workspace
+0015 
+0016 dark = [];
+0017 flat = [];
+0018 
+0019 <span class="comment">% uncomment these if you don't want to use real darks, flats, and/or perform</span>
+0020 <span class="comment">% tone linearization.</span>
+0021 <span class="comment">%dark = 0;</span>
+0022 <span class="comment">%flat = 1;</span>
+0023 
+0024 so.dir_light = [so.bd s <span class="string">'light_frames'</span> s so.exposure s so.sdate];
+0025 
+0026 <span class="comment">% If you are using an irradiance sensor then the center of your region of</span>
+0027 <span class="comment">% interest should be level with the center of the irradiance sensor.</span>
+0028 <span class="comment">% y0 must be odd so that the filter pattern of the cropped image data remains</span>
+0029 <span class="comment">% the same as filter pattern for the entire image (assuming the Bayer filter</span>
+0030 <span class="comment">% pattern is 2x2).</span>
+0031 y0 = 1175; <span class="comment">% center of irradiance sensor located at y0+(h/2).</span>
+0032 h = 500; <span class="comment">% set height of region of interest, h;</span>
+0033 
+0034 <span class="comment">%roi_light = [0, 0]; % set roi to zeroes if you want to use the entire image.</span>
+0035 roi_light = [y0, h, 0, 0]; <span class="comment">% region of interest</span>
+0036 
+0037 <span class="comment">% load master frames</span>
+0038 g = waitbar(0, [<span class="string">'Loading '</span> so.ftype <span class="string">' master frames and '</span> <span class="cont">...</span>
+0039                 <span class="string">'processing reference frames. '</span>]);
+0040 waitbar(0.001, g); <span class="comment">% Octave's buggy waitbar doesn't like 0 or 1</span>
+0041 Ns = 4; <span class="comment">% number of waitbar steps</span>
+0042 
+0043 <span class="keyword">if</span> isempty(dark)
+0044     load([so.bd s <span class="string">'dark_frames'</span> s <span class="string">'light_darks'</span> s so.ftype <span class="cont">...</span>
+0045           <span class="string">'_master_dark_'</span> so.exposure <span class="string">'.mat'</span>]);
+0046 end
+0047 waitbar(1/Ns, g);
+0048 
+0049 <span class="keyword">if</span> isempty(flat)
+0050     load([so.bd s <span class="string">'flat_frames'</span> s so.ftype <span class="string">'_master_flat.mat'</span>]);
+0051 end
+0052 waitbar(2/Ns, g);
+0053 
+0054 
+0055 <span class="comment">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+0056 <span class="comment">% Process spectral and radiometric reference spectrographs                     %</span>
+0057 <span class="comment">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+0058 <span class="comment">% process spectral_ref</span>
+0059 imgdir = [so.dir_light s <span class="string">'reference'</span> s <span class="string">'spectral'</span> s so.ftype];
+0060 spectral_ref = ensemble_average(imgdir);
+0061 
+0062 spectral_ref = spectral_ref - dark;
+0063 spectral_ref = flat_correct(spectral_ref, flat);
+0064 spectral_ref = crop_image(spectral_ref, roi_light);
+0065 
+0066 <span class="keyword">if</span> strcmpi(so.ftype, <span class="string">'PGM'</span>)
+0067     spectral_ref = bayer_demosaic(spectral_ref);
+0068 end
+0069 
+0070 [ign, pdirpath] = pop_dirname(imgdir);
+0071 metadata = process_metadata_file(pdirpath);
+0072 
+0073 matname = [so.ftype <span class="string">'_spectral_ref.mat'</span>];
+0074 save(<span class="string">'-V6'</span>, [pdirpath s matname], <span class="string">'spectral_ref'</span>, <span class="string">'metadata'</span>);
+0075 waitbar(3/Ns, g);
+0076 
+0077 <span class="comment">% process radiometric_ref</span>
+0078 imgdir = [so.dir_light s <span class="string">'reference'</span> s <span class="string">'radiometric'</span> s so.ftype];
+0079 radiometric_ref = ensemble_average(imgdir);
+0080 
+0081 radiometric_ref = radiometric_ref - dark;
+0082 radiometric_ref = flat_correct(radiometric_ref, flat);
+0083 radiometric_ref = crop_image(radiometric_ref, roi_light);
+0084 
+0085 <span class="keyword">if</span> strcmpi(so.ftype, <span class="string">'PGM'</span>)
+0086     radiometric_ref = bayer_demosaic(radiometric_ref);
+0087 end
+0088 
+0089 [ign, pdirpath] = pop_dirname(imgdir);
+0090 metadata = process_metadata_file(pdirpath);
+0091 
+0092 matname = [so.ftype <span class="string">'_radiometric_ref.mat'</span>];
+0093 save(<span class="string">'-V6'</span>, [pdirpath s matname], <span class="string">'radiometric_ref'</span>, <span class="string">'metadata'</span>);
+0094 clear spectral_ref radiometric_ref;
+0095 waitbar((4/Ns)-0.001, g);
+0096 
+0097 <span class="comment">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+0098 <span class="comment">% Process spectrographs of interest                                            %</span>
+0099 <span class="comment">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+0100 g = waitbar(0, [<span class="string">'Processing '</span> so.ftype <span class="string">' spectrographs. '</span> <span class="cont">...</span>
+0101                 <span class="string">'This may take several minutes.'</span>]);
+0102 waitbar(0.001, g); <span class="comment">% Octave's buggy waitbar doesn't like 0 or 1</span>
+0103 dl = list_dir([so.dir_light s <span class="string">'spectrographs'</span>], so.ftype, 3);
+0104 Ns = length(dl);
+0105 
+0106 for jj=1:Ns
+0107     waitbar(((jj-1)/Ns)-0.001, g);
+0108     fl = list_dir(dl{jj}, [<span class="string">'*.'</span> so.ftype], 1);
+0109     <span class="keyword">if</span> isempty(fl)
+0110         continue;
+0111     end
+0112     spctgrph = ensemble_average(dl{jj});
+0113     spctgrph = spctgrph - dark;
+0114 
+0115     spctgrph = flat_correct(spctgrph, flat);
+0116     spctgrph = crop_image(spctgrph, roi_light);
+0117 
+0118     <span class="keyword">if</span> strcmpi(so.ftype, <span class="string">'PGM'</span>)
+0119         spctgrph = bayer_demosaic(spctgrph);
+0120     end
+0121 
+0122     [ign, pdirpath] = pop_dirname(dl{jj});
+0123     metadata = process_metadata_file(pdirpath);
+0124 
+0125     [ensemble_number, pdirpath] = pop_dirname(pdirpath);
+0126     spectrographs_descriptor = pop_dirname(pdirpath);
+0127     matname = [so.ftype <span class="string">'_'</span> spectrographs_descriptor <span class="string">'_'</span> ensemble_number <span class="cont">...</span>
+0128                <span class="string">'.mat'</span>];
+0129     save(<span class="string">'-V6'</span>, [pdirpath s matname], <span class="string">'spctgrph'</span>, <span class="string">'metadata'</span>);
+0130 
+0131 end
+0132 waitbar(1-0.001, g);
+0133 
+0134 disp(<span class="string">''</span>)
+0135 disp([mfilename() <span class="string">' finished.'</span>])
+0136 clear all
+</pre>
+
+</body>
+</html>

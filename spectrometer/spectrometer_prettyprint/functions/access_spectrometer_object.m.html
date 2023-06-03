@@ -1,0 +1,74 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>functions/access_spectrometer_object.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%ACCESS_SPECTROMETER_OBJECT - Controls access to the variables that define the</span>
+0002 <span class="comment">%                             spectrometer workspace.</span>
+0003 <span class="comment">%</span>
+0004 <span class="comment">% The spectrometer object, a structure named 'so', holds the variables camera,</span>
+0005 <span class="comment">% ftype, exposure, sdate, bd, dir_light, lambda, dlambda, L, Ftri, Hu, and Hr.</span>
+0006 <span class="comment">% Access to the spectrometer object is not restricted in any way. This accessor</span>
+0007 <span class="comment">% function was used instead of a global variables because it is more likely to</span>
+0008 <span class="comment">% prevent the spectrometer object from being accidentally overwritten.</span>
+0009 <span class="comment">%</span>
+0010 <span class="comment">% Syntax:  so_out = access_spectrometer_object(so_in)</span>
+0011 <span class="comment">%</span>
+0012 <span class="comment">% Inputs:</span>
+0013 <span class="comment">%     so_in - the spectrometer object as an input.</span>
+0014 <span class="comment">%</span>
+0015 <span class="comment">% Outputs:</span>
+0016 <span class="comment">%    so_out - the stored spectrometer object.</span>
+0017 <span class="comment">%</span>
+0018 <span class="comment">% Example:</span>
+0019 <span class="comment">%    %To set the spectrometer object:</span>
+0020 <span class="comment">%    access_spectrometer_object(so_in);</span>
+0021 <span class="comment">%</span>
+0022 <span class="comment">%    %To get the Bayer filter pattern:</span>
+0023 <span class="comment">%    so_out = access_spectrometer_out();</span>
+0024 <span class="comment">%</span>
+0025 <span class="comment">%</span>
+0026 <span class="comment">% Other m-files required: none</span>
+0027 <span class="comment">% Subfunctions: none</span>
+0028 <span class="comment">% MAT-files required: none</span>
+0029 <span class="comment">%</span>
+0030 <span class="comment">% See also: NONE</span>
+0031 <span class="comment">%</span>
+0032 <span class="comment">% Author: Jonathan Thomson</span>
+0033 <span class="comment">% Work:</span>
+0034 <span class="comment">% email:</span>
+0035 <span class="comment">% Website: http://jethomson.wordpress.com</span>
+0036 <span class="comment">%</span>
+0037 
+0038 function so_out = access_spectrometer_object(so_in)
+0039 
+0040     <span class="keyword">if</span> (nargin &gt; 1)
+0041         usage(<span class="string">'access_spectrometer_object(so_in)'</span>);
+0042     end
+0043 
+0044     persistent so;
+0045 
+0046     <span class="keyword">if</span> (exist(<span class="string">'so_in'</span>, <span class="string">'var'</span>) &amp;&amp; ~isempty(so_in))
+0047         so = so_in;
+0048     end
+0049 
+0050     <span class="keyword">if</span> (nargout == 1)
+0051         so_out = so;
+0052     end
+0053 
+0054 end
+</pre>
+
+</body>
+</html>

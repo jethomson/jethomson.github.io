@@ -1,0 +1,217 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>scripts/primary/system_function_calibrated.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%</span>
+0002 <span class="comment">% This script uses a mathematically derived spectrum of an incandescent bulb,</span>
+0003 <span class="comment">% the spectrum of an actual incandescent bulb captured by the spectrometer, and</span>
+0004 <span class="comment">% a reading from a TSL230 irradiance sensor to obtain a radiometric calibration</span>
+0005 <span class="comment">% for the spectrometer.</span>
+0006 <span class="comment">%</span>
+0007 <span class="comment">% XX is a mathematical representation of the photon spectral irradiance present</span>
+0008 <span class="comment">% at the slit of the spectrometer, [photon/(s*m^2)/nm].</span>
+0009 <span class="comment">% YY is the spectrum of the incandescent bulb captured by the camera, [count].</span>
+0010 <span class="comment">%        -----</span>
+0011 <span class="comment">% XX --&gt; | H | --&gt; YY</span>
+0012 <span class="comment">%        -----</span>
+0013 <span class="comment">% XX*H = YY  --&gt; H = YY/XX</span>
+0014 <span class="comment">%</span>
+0015 <span class="comment">% H is the spectrometer's system function.</span>
+0016 <span class="comment">% For an in-depth explanation visit:</span>
+0017 <span class="comment">% http://jethomson.wordpress.com/spectrometer-articles/system-function/</span>
+0018 <span class="comment">%</span>
+0019 <span class="comment">% A spectrogram may be calibrated by either indirect or direct calibration. If</span>
+0020 <span class="comment">% the incandescent lamp input spectrum used to determine the system function is</span>
+0021 <span class="comment">% radiometrically calibrated, then dividing the system function out of a</span>
+0022 <span class="comment">% spectrogram should result in distortion being removed and it becoming</span>
+0023 <span class="comment">% radiometrically calibrated. This is known as indirect calibration because a</span>
+0024 <span class="comment">% direct irradiance measurement of the light source of interest wasn't used to</span>
+0025 <span class="comment">% calibrate its spectrogram. Direct calibration uses a measurement taken from an</span>
+0026 <span class="comment">% irradiance sensor of the light source of interest to calibrate its spectrogram</span>
+0027 <span class="comment">% and relies on dividing out the system function to remove distortion from the</span>
+0028 <span class="comment">% spectrogram but not to radiometrically calibrate it. Unfortunately indirect</span>
+0029 <span class="comment">% and direct calibrations don't always agree with each other because the</span>
+0030 <span class="comment">% irradiance sensor and camera are physically separated and don't always</span>
+0031 <span class="comment">% see a light source in the same way. For example, a light source could look</span>
+0032 <span class="comment">% like a point source to the camera, but like an area source to the irradiance</span>
+0033 <span class="comment">% sensor. Also, assuming a nonisotropic source, the rays that strike the</span>
+0034 <span class="comment">% irradiance sensor might not originate from a part of the source with the same</span>
+0035 <span class="comment">% radiation pattern as the rays that strike the camera. For this reason, it's</span>
+0036 <span class="comment">% best to always reference every spectrogram to what the irradiance sensor sees.</span>
+0037 <span class="comment">% Therefore you should take an irradiance measurement of every light source of</span>
+0038 <span class="comment">% interest and use those measurements to directly calibrated their spectrograms.</span>
+0039 <span class="comment">%</span>
+0040 <span class="comment">% NOTES:</span>
+0041 <span class="comment">% This script won't produce accurate results when used on JPEG image data</span>
+0042 <span class="comment">% because of the non-linear transformations involved in creating a JPEG.</span>
+0043 <span class="comment">%</span>
+0044 <span class="comment">% This code uses a table of tungsten emissivity values to model the incandescent</span>
+0045 <span class="comment">% bulb's spectrum; however, the spectral emissivity of an incandescent bulb can</span>
+0046 <span class="comment">% vary quite a bit even among bulbs of the exact same type and manufacturer.</span>
+0047 <span class="comment">%</span>
+0048 <span class="comment">% Even when my camera is in manual mode, the camera will automatically make</span>
+0049 <span class="comment">% small corrections to the chosen f-number based of the scene's brightness.</span>
+0050 <span class="comment">% You can use CHDK's aperture override setting to prevent this.</span>
+0051 <span class="comment">%</span>
+0052 <span class="comment">% The smooth ratio is (smooth width)/(peak width) where peak width is full</span>
+0053 <span class="comment">% width at half maximum (FWHM). Higher smooth ratios will reduce peak height</span>
+0054 <span class="comment">% and increase peak width. Therefore, to preserve peak width the smooth ratio</span>
+0055 <span class="comment">% should be less than 0.2</span>
+0056 <span class="comment">%</span>
+0057 
+0058 <span class="comment">%disp('*** Determining spectrometer''s system function. ***');</span>
+0059 s = filesep;
+0060 so = access_spectrometer_object();
+0061 
+0062 <span class="comment">%**** USER SUPPLIED DATA ****%</span>
+0063 <span class="comment">%calibration_lamp_type = '60Wclear'</span>
+0064 calibration_lamp_type = <span class="string">'100Wclear'</span>
+0065 
+0066 switch calibration_lamp_type
+0067 <span class="keyword">case</span> <span class="string">'60Wclear'</span>
+0068     <span class="comment">% These parameters result in a calculated filament temperature of 2681.8 K</span>
+0069     <span class="comment">% internet avg. 2707.73 K</span>
+0070     Rx = mean([1.35 0.85]);  <span class="comment">% [ohms]</span>
+0071     Ri = mean([17.8 17.35]);  <span class="comment">% [ohms]</span>
+0072     Vf = mean([(121.85 - 0.0055) (121.75 - 0)]); <span class="comment">% [V]</span>
+0073     If = mean([(0.5 - 0.01) (0.47 - 0)]); <span class="comment">% [A]</span>
+0074     Rf = (Vf/If) - Rx;  <span class="comment">% [ohms]</span>
+0075     Ti = 24.444; <span class="comment">% [C]</span>
+0076 
+0077     Tf = calculate_filament_temp(Ti, Ri, Rf);
+0078 
+0079     load([so.dir_light  s <span class="string">'spectrographs'</span> s <span class="string">'60W_Sylvania_8'</span> s so.ftype <span class="cont">...</span>
+0080           <span class="string">'_60W_Sylvania_8_e0.mat'</span>]);
+0081     radiometric_ref = spctgrph;
+0082 
+0083 <span class="keyword">case</span> <span class="string">'100Wclear'</span>
+0084     <span class="comment">% These parameters result in a calculated filament temperature of 2772.7 K</span>
+0085     <span class="comment">% Averaging five filament temperatures found on the web resulting in:</span>
+0086     <span class="comment">% mean 2786.8 K, std. dev. 58.554 K</span>
+0087     Rx = mean([1.35 0.85]); <span class="comment">% [ohms]</span>
+0088     Ri = mean([10.2 9.65]); <span class="comment">% [ohms]</span>
+0089     Vf = mean([(119.35 - 0.0055) (119.35 - 0)]); <span class="comment">% [V]</span>
+0090     If = mean([(0.815 - 0.01) (0.79 - 0)]); <span class="comment">% [A]</span>
+0091     Rf = (Vf/If) - Rx; <span class="comment">% [ohms]</span>
+0092     Ti = 24.444; <span class="comment">% [C]</span>
+0093 
+0094     Tf = calculate_filament_temp(Ti, Ri, Rf);
+0095 
+0096     load([so.dir_light  s <span class="string">'reference'</span> s <span class="string">'radiometric'</span> s so.ftype <span class="cont">...</span>
+0097           <span class="string">'_radiometric_ref.mat'</span>]);
+0098 
+0099 otherwise
+0100     error(<span class="string">'system_function_calibrated: unknown calibration lamp type.'</span>);
+0101 end
+0102 
+0103 smooth_width = 201;
+0104 
+0105 <span class="comment">% The bands [so.lambda(1) to l0] and [lf to so.lambda(end)] will be set to</span>
+0106 <span class="comment">% infinity in the system function, H, so that noise with values near zero</span>
+0107 <span class="comment">% will not cause the result of deconvolution to blow up. To determine the</span>
+0108 <span class="comment">% bands, plot H to see the regions where the function blows up, then adjust</span>
+0109 <span class="comment">% the band intervals to exclude those regions.</span>
+0110 
+0111 <span class="keyword">if</span> strcmpi(so.camera, <span class="string">'A75'</span>) <span class="comment">% JPEG only camera. Don't expect accurate results.</span>
+0112     l0b = 380; <span class="comment">% [nm]</span>
+0113     lfb = 500;
+0114     l0g = 480;
+0115     lfg = 610;
+0116     l0r = 580;
+0117     lfr = 670;
+0118 <span class="keyword">elseif</span> strcmpi(so.camera, <span class="string">'A590'</span>)
+0119     <span class="keyword">if</span> strcmpi(so.ftype, <span class="string">'JPG'</span>) <span class="comment">% Don't expect accurate results with JPEGs.</span>
+0120         l0b = 390; <span class="comment">% [nm]</span>
+0121         lfb = 510;
+0122         l0g = 490;
+0123         lfg = 600;
+0124         l0r = 565;
+0125         lfr = 650;
+0126     <span class="keyword">elseif</span> strcmpi(so.ftype, <span class="string">'PGM'</span>)
+0127         l0b = 390; <span class="comment">% [nm]</span>
+0128         lfb = 665;
+0129         l0g = 410;
+0130         lfg = 675;
+0131         l0r = 420;
+0132         lfr = 690;
+0133     end
+0134 end
+0135 
+0136 <span class="comment">%**** END USER SUPPLIED DATA ****%</span>
+0137 
+0138 h = 6.62606896*10^-34; <span class="comment">% Planck constant, [J*s]</span>
+0139 c = 299792458; <span class="comment">% speed of light, [m/s]</span>
+0140 Ftri = triang(smooth_width);
+0141 so.Ftri = Ftri./sum(Ftri);
+0142 
+0143 dl = 0.1;
+0144 lambda_Re = 250:dl:1250;
+0145 
+0146 sensor_type = metadata.sensor_type;
+0147 fO = str2double(metadata.TSL230_fO); <span class="comment">% [kHz]</span>
+0148 sensitivity = str2double(metadata.TSL230_sensitivity);
+0149 distance = str2double(metadata.distance); <span class="comment">% [m]</span>
+0150 
+0151 <span class="comment">%disp(['filament temperature : ' num2str(Tf) 'K'])</span>
+0152 
+0153 <span class="comment">% spectral photon radiance, [photon/(s*sr*m^2)/nm]</span>
+0154 N = generate_Wbb_spectrum(lambda_Re, Tf, <span class="string">'quantal'</span>);
+0155 Af = 1; <span class="comment">% unknown emitting area, [m^2]</span>
+0156 
+0157 <span class="comment">% This model assumes the light source is an isotropic point source, which is</span>
+0158 <span class="comment">% most likely an incorrect assumption. However, we only care about the shape</span>
+0159 <span class="comment">% of X_model. TSL230_fO_to_irradiance() should scale it properly. Multiplying</span>
+0160 <span class="comment">% N by Af and dividing by distance squared simply transforms the spectrum to the</span>
+0161 <span class="comment">% correct units (i.e. from radiance to irradiance).</span>
+0162 X_model = Af*N/(distance^2); <span class="comment">% spectral photon irradiance, [photon/(s*m^2)/nm]</span>
+0163 
+0164 <span class="comment">% use the output of the irradiance sensor to scale the model</span>
+0165 X = TSL230_fO_to_irradiance(lambda_Re, X_model, fO, sensitivity, sensor_type, <span class="string">'quantal'</span>);
+0166 
+0167 X = interp1(lambda_Re, X, so.lambda, <span class="string">'spline'</span>);
+0168 XX = repmat(X, 1, 3); <span class="comment">% [photon/(s*m^2)/nm]</span>
+0169 
+0170 YY = image2spectrum(radiometric_ref, <span class="string">'rgb'</span>); <span class="comment">% [count]</span>
+0171 YY = filtfilt(so.Ftri, 1, YY); <span class="comment">% smooth YY</span>
+0172 
+0173 H = YY./XX; <span class="comment">% spectrometer system function, [count]/[photon/(s*m^2)/nm]</span>
+0174 
+0175 [ign, n0r] = min(abs(so.lambda-l0r));
+0176 [ign, n0g] = min(abs(so.lambda-l0g));
+0177 [ign, n0b] = min(abs(so.lambda-l0b));
+0178 [ign, nfr] = min(abs(so.lambda-lfr));
+0179 [ign, nfg] = min(abs(so.lambda-lfg));
+0180 [ign, nfb] = min(abs(so.lambda-lfb));
+0181 
+0182 H(1:n0r,1) = Inf;
+0183 H(1:n0g,2) = Inf;
+0184 H(1:n0b,3) = Inf;
+0185 H(nfr:end,1) = Inf;
+0186 H(nfg:end,2) = Inf;
+0187 H(nfb:end,3) = Inf;
+0188 
+0189 <span class="comment">% energy per photon as a function of wavelength</span>
+0190 WWp = repmat(h*c./(so.lambda*10^-9), 1, 3); <span class="comment">% [J/photon]</span>
+0191 
+0192 <span class="comment">% ([count]/[photon/(s*m^2)/nm])/[J/photon] = [count]/[W/m^2/nm]</span>
+0193 so.Hr = H./WWp; <span class="comment">% Hr represents the transformation from spectral irradiance to counts.</span>
+0194 
+0195 access_spectrometer_object(so);
+0196 clear
+0197 <span class="comment">%disp([mfilename() ' finished.'])</span>
+</pre>
+
+</body>
+</html>

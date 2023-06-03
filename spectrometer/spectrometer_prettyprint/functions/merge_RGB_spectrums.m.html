@@ -1,0 +1,80 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>functions/merge_RGB_spectrums.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%MERGE_RGB_SPECTRUMS - Combines the red, green, and blue channels of a spectrum</span>
+0002 <span class="comment">%                      by adding them together (averaging where they overlap)</span>
+0003 <span class="comment">%                      to get a single spectrum that covers the entire</span>
+0004 <span class="comment">%                      range of wavelengths.</span>
+0005 <span class="comment">%</span>
+0006 <span class="comment">% When a spectrum covers a wide range of wavelengths it will be recorded by</span>
+0007 <span class="comment">% more than on of the camera's color channels. This functions merges the</span>
+0008 <span class="comment">% spectrum seen by each color channel into a single spectrum.</span>
+0009 <span class="comment">%</span>
+0010 <span class="comment">%</span>
+0011 <span class="comment">% Syntax:  Zgray = merge_RGB_spectrums(Zrgb)</span>
+0012 <span class="comment">%</span>
+0013 <span class="comment">% Inputs:</span>
+0014 <span class="comment">%    Zrgb - an RGB spectrum</span>
+0015 <span class="comment">%</span>
+0016 <span class="comment">% Outputs:</span>
+0017 <span class="comment">%    Zgray - the result of merging each channel of the RGB spectrum by either</span>
+0018 <span class="comment">%            summing or averaging depending on how the data in each channel</span>
+0019 <span class="comment">%            overlaps data in the other channels.</span>
+0020 <span class="comment">%</span>
+0021 <span class="comment">% Example:</span>
+0022 <span class="comment">%    none</span>
+0023 <span class="comment">%</span>
+0024 <span class="comment">% Other m-files required: none</span>
+0025 <span class="comment">% Subfunctions: none</span>
+0026 <span class="comment">% MAT-files required: none</span>
+0027 <span class="comment">%</span>
+0028 <span class="comment">% See also:</span>
+0029 <span class="comment">%</span>
+0030 <span class="comment">% Author: Jonathan Thomson</span>
+0031 <span class="comment">% Work:</span>
+0032 <span class="comment">% email:</span>
+0033 <span class="comment">% Website: http://jethomson.wordpress.com</span>
+0034 <span class="comment">%</span>
+0035 
+0036 function Zgray = merge_RGB_spectrums(Zrgb)
+0037 
+0038     <span class="keyword">if</span> (nargin ~= 1 || isempty(Zrgb))
+0039         usage(<span class="string">'merge_RGB_spectrums(Zrgb)'</span>);
+0040     end
+0041 
+0042     Ftri = triang(5);
+0043     Ftri = Ftri./sum(Ftri);
+0044 
+0045     I = Zrgb~=0; <span class="comment">% create a matrix that is 1 where Zrgb is non-zero.</span>
+0046 
+0047     <span class="comment">% D is 0 when all channels are zero, 1 when no channels overlap,</span>
+0048     <span class="comment">% 2 when two channels overlap, and 3 when all channels overlap.</span>
+0049     D = sum(I,2);
+0050     <span class="comment">% where D is 0 change it to 1, this prevents dividing by zero.</span>
+0051     D(D==0) = 1;
+0052 
+0053     <span class="comment">% where a channel doesn't overlap (i.e. D is 1) no change results,</span>
+0054     <span class="comment">% but when a channel overlaps another channel (i.e. D &gt; 1) they</span>
+0055     <span class="comment">% will be averaged.</span>
+0056     Zgray = sum(Zrgb,2)./D;
+0057     Zgray = filtfilt(Ftri, 1, Zgray);
+0058 
+0059 end
+0060 
+</pre>
+
+</body>
+</html>

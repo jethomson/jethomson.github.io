@@ -1,0 +1,35 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>./setup_path.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">% Builds a useful path for the spectrometer code.</span>
+0002 
+0003 <span class="comment">% This command will change the working directory to the directory in which</span>
+0004 <span class="comment">% this file resides. It only works if this m-file is in the path.</span>
+0005 wd = fileparts(mfilename(<span class="string">'fullpath'</span>));
+0006 cd(wd);
+0007 
+0008 s = filesep;
+0009 gpf = genpath([wd s <span class="string">'functions'</span>]);
+0010 gps = genpath([wd s <span class="string">'scripts'</span>]);
+0011 gpda = genpath([wd s <span class="string">'TSL230_data_acquisition'</span>]);
+0012 
+0013 addpath(wd, gpf, gps, gpda, <span class="string">'-end'</span>)
+0014 
+0015 clear all;
+</pre>
+
+</body>
+</html>

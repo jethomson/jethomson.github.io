@@ -1,0 +1,112 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>functions/generate_Wbb_spectrum.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%GENERATE_WBB_SPECTRUM - Generates a mathematical approximation of the spectrum</span>
+0002 <span class="comment">%                        produced by a tungsten filament incandescent light</span>
+0003 <span class="comment">%                        bulb.</span>
+0004 <span class="comment">%</span>
+0005 <span class="comment">% The filament's temperature can be plugged into Planck's law and corrected for</span>
+0006 <span class="comment">% tungsten's emissivity to get a mathematical approximation of the light bulb's</span>
+0007 <span class="comment">% spectrum. Wbb stands for tungsten black body.</span>
+0008 <span class="comment">%</span>
+0009 <span class="comment">% The output is spectral photon radiance because a CCD measures intensity by</span>
+0010 <span class="comment">% counting photons.</span>
+0011 <span class="comment">%</span>
+0012 <span class="comment">% Emissivity data is available for temperatures 1600 to 2800 K and wavelengths</span>
+0013 <span class="comment">% 250 to 3500 nm. Emissivity outside of temperature range is extrapolated,</span>
+0014 <span class="comment">% which may result in error. If lambda is outside of the wavelength range an</span>
+0015 <span class="comment">% error is returned.</span>
+0016 <span class="comment">%</span>
+0017 <span class="comment">% Even when two bulbs appear identical the emissivity of their filaments</span>
+0018 <span class="comment">% can differ significantly, so don't rely on this function to return</span>
+0019 <span class="comment">% an entirely accurate model of your light bulb's spectrum.</span>
+0020 <span class="comment">%</span>
+0021 <span class="comment">% Syntax:  [N, lambda] = generate_Wbb_spectrum(lambda, Tf, dist_type)</span>
+0022 <span class="comment">%</span>
+0023 <span class="comment">% Inputs:</span>
+0024 <span class="comment">%    lambda - wavelength scale in nanometers [nm], set lambda = [] if you want</span>
+0025 <span class="comment">%             to use the default lambda.</span>
+0026 <span class="comment">%        Tf - the temperature of the filament in Kelvin [K].</span>
+0027 <span class="comment">% dist_type - the type of spectrum to return. 'power' is [W/(sr*m^2)/nm],</span>
+0028 <span class="comment">%             'quantal' is [photons/(s*sr*m^2)/nm]</span>
+0029 <span class="comment">%</span>
+0030 <span class="comment">% Outputs:</span>
+0031 <span class="comment">%       N - the tungsten filament's emissivity corrected black body spectrum.</span>
+0032 <span class="comment">%  lambda - the default lambda if the input argument lambda is empty.</span>
+0033 <span class="comment">%</span>
+0034 <span class="comment">% Example:</span>
+0035 <span class="comment">%    % Tf = 2786.8 K is the result of averaging several sources stating the</span>
+0036 <span class="comment">%    % filament temperature of a 100 W, 120 V incandescent lamp.</span>
+0037 <span class="comment">%    N = generate_Wbb_spectrum(lambda, 2786.8, 'power');</span>
+0038 <span class="comment">%</span>
+0039 <span class="comment">%    % If you'd like to use the full range of wavelengths covered by the</span>
+0040 <span class="comment">%    % spectral emissivity data, set lambda to empty.</span>
+0041 <span class="comment">%    [N, lambda] = generate_Wbb_spectrum([], 2786.8, 'quantal');</span>
+0042 <span class="comment">%</span>
+0043 <span class="comment">%</span>
+0044 <span class="comment">% Other m-files required: none</span>
+0045 <span class="comment">% Subfunctions: none</span>
+0046 <span class="comment">% MAT-files required: none</span>
+0047 <span class="comment">%</span>
+0048 <span class="comment">% See also: WAVELENGTH_CALIBRATE</span>
+0049 <span class="comment">%</span>
+0050 <span class="comment">% Author: Jonathan Thomson</span>
+0051 <span class="comment">% Work:</span>
+0052 <span class="comment">% email:</span>
+0053 <span class="comment">% Website: http://jethomson.wordpress.com</span>
+0054 <span class="comment">%</span>
+0055 
+0056 function [N, lambda] = generate_Wbb_spectrum(lambda, Tf, dist_type)
+0057 
+0058     <span class="keyword">if</span> (nargin ~= 3)
+0059         usage(<span class="string">'generate_Wbb_spectrum(lambda, Tf, dist_type)'</span>);
+0060     end
+0061 
+0062     <span class="keyword">if</span> (isempty(Tf) || isempty(dist_type))
+0063         error([<span class="string">'generate_Wbb_spectrum: empty value for argument '</span> <span class="cont">...</span>
+0064                <span class="string">'dist_type not allowed.'</span>]);
+0065     end
+0066 
+0067     s = filesep;
+0068 
+0069     <span class="comment">% load lambda_ems [nm], T [K], and spectral_emissivity.</span>
+0070     <span class="comment">% the spectral emissivity of tungsten is temperature and wavelength</span>
+0071     <span class="comment">% dependent.</span>
+0072     load([<span class="string">'data'</span> s <span class="string">'essential_data_sets'</span> s <span class="string">'spectral_emissivity.mat'</span>]);
+0073     spectral_emissivity_Tf = interp1(T, spectral_emissivity, Tf, <span class="cont">...</span>
+0074                                          <span class="string">'spline'</span>, <span class="string">'extrap'</span>);
+0075 
+0076     M = blackbody_spectrum(lambda_ems, Tf, dist_type);
+0077 
+0078     <span class="comment">% tungsten is not a perfect black-body radiator so M must be corrected</span>
+0079     <span class="comment">% with tungsten's spectral emissivity at temperature Tf.</span>
+0080     Me = spectral_emissivity_Tf.*M;
+0081 
+0082     <span class="keyword">if</span> ~isempty(lambda)
+0083         <span class="keyword">if</span> (lambda(1) &lt; lambda_ems(1) || lambda(end) &gt; lambda_ems(end))
+0084             warning(<span class="string">'generate_Wbb_spectrum: lambda is out of range.'</span>);
+0085         end
+0086         <span class="comment">% interpolate so we can use lambda [nm] instead of lambda_ems</span>
+0087         N = interp1(lambda_ems, Me, lambda, <span class="string">'spline'</span>, 0);
+0088     <span class="keyword">else</span>
+0089         lambda = lambda_ems.';
+0090         N = Me.';
+0091     end
+0092 end
+</pre>
+
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>functions/myimread.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%MYIMREAD - A wrapper function for imread and other image reading functions for</span>
+0002 <span class="comment">%           image file formats that are unsupported by imread.</span>
+0003 <span class="comment">%</span>
+0004 <span class="comment">% Syntax:  I = myimread(fname)</span>
+0005 <span class="comment">%</span>
+0006 <span class="comment">% Inputs:</span>
+0007 <span class="comment">%    fname - an image's filename</span>
+0008 <span class="comment">%</span>
+0009 <span class="comment">% Outputs:</span>
+0010 <span class="comment">%    I - a matrix representing the contents of the image pointed to by fname.</span>
+0011 <span class="comment">%</span>
+0012 <span class="comment">% Example:</span>
+0013 <span class="comment">%</span>
+0014 <span class="comment">%</span>
+0015 <span class="comment">% Other m-files required: read_16bit_pgm_test, pnmread</span>
+0016 <span class="comment">% Subfunctions: none</span>
+0017 <span class="comment">% MAT-files required: none</span>
+0018 <span class="comment">%</span>
+0019 <span class="comment">% See also: READ_16BIT_PGM_TEST, PNMREAD</span>
+0020 <span class="comment">%</span>
+0021 <span class="comment">% Author: Jonathan Thomson</span>
+0022 <span class="comment">% Work:</span>
+0023 <span class="comment">% email:</span>
+0024 <span class="comment">% Website: http://jethomson.wordpress.com</span>
+0025 <span class="comment">%</span>
+0026 
+0027 function I = myimread(fname)
+0028 
+0029     <span class="keyword">if</span> (nargin ~= 1 || isempty(fname))
+0030         usage(<span class="string">'myimread(fname)'</span>);
+0031     end
+0032 
+0033     [ign, ign, ext] = fileparts(fname);
+0034 
+0035     <span class="comment">% If Octave does not support your image's file format, you'll</span>
+0036     <span class="comment">% need to add a special purpose function to decode the image's</span>
+0037     <span class="comment">% data.</span>
+0038     <span class="keyword">if</span> (~read_16bit_pgm_test() &amp;&amp; strcmpi(ext, <span class="string">'.PGM'</span>))
+0039         I = double(pnmread(fname));
+0040     <span class="comment">%elseif (~read_16bit_tiff_test() &amp;&amp; strcmpi(ext, '.TIFF'))</span>
+0041     <span class="comment">%    I = double(tiffread(fname));</span>
+0042     <span class="keyword">else</span>
+0043         I = double(imread(fname));
+0044     end
+0045 end
+</pre>
+
+</body>
+</html>

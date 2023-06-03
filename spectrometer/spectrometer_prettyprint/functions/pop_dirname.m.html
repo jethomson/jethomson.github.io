@@ -1,0 +1,79 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>functions/pop_dirname.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%POP_DIRNAME - Returns the name of the last directory in dirpath as well as</span>
+0002 <span class="comment">%              it's parent directory's path.</span>
+0003 <span class="comment">%</span>
+0004 <span class="comment">% Syntax:  [dirname, pdirpath] = pop_dirname(dirpath)</span>
+0005 <span class="comment">%</span>
+0006 <span class="comment">% Inputs:</span>
+0007 <span class="comment">%    dirpath  - a path to a directory</span>
+0008 <span class="comment">%</span>
+0009 <span class="comment">% Outputs:</span>
+0010 <span class="comment">%    dirname  - the name of the directory that dir path points to.</span>
+0011 <span class="comment">%    pdirpath - the path to the parent directory of dirname.</span>
+0012 <span class="comment">%</span>
+0013 <span class="comment">%</span>
+0014 <span class="comment">% Example 1:</span>
+0015 <span class="comment">%    [dirname, pdirpath] = pop_dirname('path/to/parent/mydirname')</span>
+0016 <span class="comment">%    --&gt;  dirname = 'mydirname'</span>
+0017 <span class="comment">%    --&gt;  pdirpath = 'path/to/parent'</span>
+0018 <span class="comment">%</span>
+0019 <span class="comment">% Example 2:</span>
+0020 <span class="comment">% % It's very common for directory paths to be written both with and without</span>
+0021 <span class="comment">% % a trailing slash. pop_dirname will return the same result whether or not</span>
+0022 <span class="comment">% % there is a trailing slash. Therefore pop_dirname can be used to make sure</span>
+0023 <span class="comment">% % a path to a directory is properly formatted.</span>
+0024 <span class="comment">%    mypath = 'path/to/parent/mydirname'  % correct</span>
+0025 <span class="comment">%    mypath = 'path/to/parent/mydirname/' % not quite right</span>
+0026 <span class="comment">%    % OR</span>
+0027 <span class="comment">%    mypath = 'path/to/parent/mydirname////' % wrong</span>
+0028 <span class="comment">%    [dirname, pdirpath] = pop_dirname(mypath)</span>
+0029 <span class="comment">%    s = filesep;</span>
+0030 <span class="comment">%    goodpath = [pdirpath s dirname]; %no trailing slash</span>
+0031 <span class="comment">%</span>
+0032 <span class="comment">% Other m-files required: none</span>
+0033 <span class="comment">% Subfunctions: none</span>
+0034 <span class="comment">% MAT-files required: none</span>
+0035 <span class="comment">%</span>
+0036 <span class="comment">% See also: none</span>
+0037 <span class="comment">%</span>
+0038 <span class="comment">% Author: Jonathan Thomson</span>
+0039 <span class="comment">% Work:</span>
+0040 <span class="comment">% email:</span>
+0041 <span class="comment">% Website: http://jethomson.wordpress.com</span>
+0042 <span class="comment">%</span>
+0043 
+0044 function [dirname, pdirpath] = pop_dirname(dirpath)
+0045 
+0046     <span class="keyword">if</span> (nargin ~= 1 || isempty(dirpath))
+0047         usage(<span class="string">'pop_dirname(dirpath)'</span>);
+0048     end
+0049 
+0050     s = filesep;
+0051     dirname = [];
+0052     <span class="comment">% looping gets rid of possibly extraneous file separators at the end of</span>
+0053     <span class="comment">% dirpath</span>
+0054     <span class="keyword">while</span> (isempty(dirname))
+0055         [d, dirname] = fileparts(dirpath);
+0056         dirpath = d;
+0057     end
+0058     pdirpath = dirpath;
+0059 end
+</pre>
+
+</body>
+</html>

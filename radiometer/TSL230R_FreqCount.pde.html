@@ -1,0 +1,180 @@
+<html>
+<head>
+<title>TSL230_FreqCounter.pde</title>
+</head>
+
+<body>
+
+
+<pre>
+#include&nbsp;&lt;<span style="color: #CC6600;">FreqCount</span>.h&gt;
+
+const&nbsp;<span style="color: #CC6600;">int</span> nOE = 6;
+const&nbsp;<span style="color: #CC6600;">int</span> S0 = 8;
+const&nbsp;<span style="color: #CC6600;">int</span> S1 = 7;
+const&nbsp;<span style="color: #CC6600;">int</span> S2 = 9;
+const&nbsp;<span style="color: #CC6600;">int</span> S3 = 10;
+
+const&nbsp;<span style="color: #CC6600;">int</span> light_switch_pin = 13;
+
+<span style="color: #CC6600;">int</span> sensitivity = 1; <span style="color: #7E7E7E;">// 0x (off), 1x, 10x, 100x</span>
+<span style="color: #CC6600;">int</span> fscale = 1; <span style="color: #7E7E7E;">// divide by: 1, 2, 10, 100</span>
+<span style="color: #CC6600;">int</span> num_measurements = 0;
+
+<span style="color: #CC6600;">boolean</span> transmit = <span style="color: #CC6600;">false</span>;
+
+<span style="color: #CC6600;">void</span> <span style="color: #CC6600;"><b>setup</b></span>() {
+
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">pinMode</span>(nOE, <span style="color: #006699;">OUTPUT</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">pinMode</span>(S0, <span style="color: #006699;">OUTPUT</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">pinMode</span>(S1, <span style="color: #006699;">OUTPUT</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">pinMode</span>(S2, <span style="color: #006699;">OUTPUT</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">pinMode</span>(S3, <span style="color: #006699;">OUTPUT</span>);
+
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">pinMode</span>(light_switch_pin, <span style="color: #006699;">OUTPUT</span>);
+&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(nOE, <span style="color: #006699;">HIGH</span>);
+
+&nbsp;&nbsp;&nbsp;&nbsp;light_switch(0);
+&nbsp;&nbsp;&nbsp;&nbsp;set_sensitivity(sensitivity);
+&nbsp;&nbsp;&nbsp;&nbsp;set_scaling(fscale);
+&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;"><b>Serial</b></span>.<span style="color: #CC6600;">begin</span>(9600); <span style="color: #7E7E7E;">// connect to the serial port</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">delay</span>(100);
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">FreqCount</span>.<span style="color: #CC6600;">begin</span>(1000); <span style="color: #7E7E7E;">// gate time of 1000 ms.</span>
+}
+
+<span style="color: #CC6600;">void</span> <span style="color: #CC6600;"><b>loop</b></span>() {
+&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">unsigned</span> <span style="color: #CC6600;">long</span> f = 0;
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">char</span> cmd = <span style="color: #006699;">'\0'</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">char</span> argbuf[4] = <span style="color: #006699;">"xxx"</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">int</span> arg = 0;
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">char</span> p = <span style="color: #006699;">'x'</span>;
+&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">if</span> (<span style="color: #CC6600;"><b>Serial</b></span>.<span style="color: #CC6600;">available</span>() &gt;= 4) {
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmd&nbsp;=&nbsp;<span style="color: #CC6600;"><b>Serial</b></span>.<span style="color: #CC6600;">read</span>();
+&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">for</span> (<span style="color: #CC6600;">int</span> i=0; i&lt;3; i++) {
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;argbuf[i]&nbsp;=&nbsp;<span style="color: #CC6600;"><b>Serial</b></span>.<span style="color: #CC6600;">read</span>();
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;arg&nbsp;=&nbsp;atoi(argbuf);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">switch</span> (cmd) {
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">case</span> <span style="color: #006699;">'t'</span>:  <span style="color: #7E7E7E;">//arg: 000 is off, 111 is on</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;transmit&nbsp;=&nbsp;<span style="color: #CC6600;">true</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(nOE, <span style="color: #006699;">LOW</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;num_measurements&nbsp;=&nbsp;arg;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">break</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">case</span> <span style="color: #006699;">'l'</span>:  <span style="color: #7E7E7E;">//arg: 000 is off, 111 is on</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;light_switch(arg);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">break</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">case</span> <span style="color: #006699;">'s'</span>:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;set_sensitivity(arg);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">break</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">case</span> <span style="color: #006699;">'f'</span>:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;set_scaling(arg);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">break</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">default</span>: <span style="color: #7E7E7E;">// catches bad commands</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+&nbsp;&nbsp;&nbsp;&nbsp;}
+
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">if</span> (transmit == <span style="color: #CC6600;">true</span> &amp;&amp; <span style="color: #CC6600;">FreqCount</span>.<span style="color: #CC6600;">available</span>()) {
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;f&nbsp;=&nbsp;fscale*(<span style="color: #CC6600;">FreqCount</span>.<span style="color: #CC6600;">read</span>());
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;"><b>Serial</b></span>.<span style="color: #CC6600;">print</span>(f);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;"><b>Serial</b></span>.<span style="color: #CC6600;">print</span>(<span style="color: #006699;">"\n"</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;num_measurements--;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">if</span> (num_measurements &lt;= 0) {
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;transmit&nbsp;=&nbsp;<span style="color: #CC6600;">false</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(nOE, <span style="color: #006699;">HIGH</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #7E7E7E;">//MATLAB's fgetl doesn't see EOF correctly with serial, so send</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #7E7E7E;">//an explicit indicator that there is no more data.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;"><b>Serial</b></span>.<span style="color: #CC6600;">print</span>(<span style="color: #006699;">"EOT\n"</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">delay</span>(200);
+&nbsp;&nbsp;&nbsp;&nbsp;}
+}
+
+
+<span style="color: #CC6600;">void</span> light_switch (<span style="color: #CC6600;">int</span> switch_state) {
+&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">if</span> (switch_state == 0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(light_switch_pin, <span style="color: #006699;">LOW</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">else</span> <span style="color: #CC6600;">if</span> (switch_state == 111)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(light_switch_pin, <span style="color: #006699;">HIGH</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">return</span>;
+}
+
+<span style="color: #CC6600;">void</span> set_sensitivity( <span style="color: #CC6600;">int</span> s ) {
+
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">switch</span>( s ) {
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">case</span> 0: <span style="color: #7E7E7E;">// power down</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sensitivity&nbsp;=&nbsp;s;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(S0, <span style="color: #006699;">LOW</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(S1, <span style="color: #006699;">LOW</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">break</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">case</span> 1: <span style="color: #7E7E7E;">// 1x</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sensitivity&nbsp;=&nbsp;s;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(S0, <span style="color: #006699;">HIGH</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(S1, <span style="color: #006699;">LOW</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">break</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">case</span> 10: <span style="color: #7E7E7E;">// 10x</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sensitivity&nbsp;=&nbsp;s;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(S0, <span style="color: #006699;">LOW</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(S1, <span style="color: #006699;">HIGH</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">break</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">case</span> 100: <span style="color: #7E7E7E;">// 100x</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sensitivity&nbsp;=&nbsp;s;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(S0, <span style="color: #006699;">HIGH</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(S1, <span style="color: #006699;">HIGH</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">break</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">default</span>:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">break</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;}
+
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">return</span>;  
+}
+
+
+<span style="color: #CC6600;">void</span> set_scaling ( <span style="color: #CC6600;">int</span> fs ) {
+
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">switch</span>( fs ) {
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">case</span> 1: <span style="color: #7E7E7E;">//divide by 1 (no scaling)</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fscale&nbsp;=&nbsp;fs;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(S2, <span style="color: #006699;">LOW</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(S3, <span style="color: #006699;">LOW</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">break</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">case</span> 2: <span style="color: #7E7E7E;">//divide by 2</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fscale&nbsp;=&nbsp;fs;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(S2, <span style="color: #006699;">HIGH</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(S3, <span style="color: #006699;">LOW</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">break</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">case</span> 10: <span style="color: #7E7E7E;">//divide by 10</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fscale&nbsp;=&nbsp;fs;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(S2, <span style="color: #006699;">LOW</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(S3, <span style="color: #006699;">HIGH</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">break</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">case</span> 100: <span style="color: #7E7E7E;">//divide by 100</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fscale&nbsp;=&nbsp;fs;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(S2, <span style="color: #006699;">HIGH</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">digitalWrite</span>(S3, <span style="color: #006699;">HIGH</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">break</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">default</span>:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">break</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;}
+
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #CC6600;">return</span>;
+}
+
+</pre>
+
+
+</body>
+</html>

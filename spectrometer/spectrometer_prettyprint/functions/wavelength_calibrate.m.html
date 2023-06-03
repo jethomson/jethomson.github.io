@@ -1,0 +1,150 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>functions/wavelength_calibrate.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%WAVELENGTH_CALIBRATE - Takes a horizontal slice of a reference spectrograph,</span>
+0002 <span class="comment">%                       and through user interaction finds the pixel locations</span>
+0003 <span class="comment">%                       that correspond to known wavelengths which are then used</span>
+0004 <span class="comment">%                       to calculate and output a calibrated wavelength scale.</span>
+0005 <span class="comment">%</span>
+0006 <span class="comment">% It's not necessary to use every row of a spectrograph to derive the</span>
+0007 <span class="comment">% spectrogram. Although every column is always used. To specify a horizontal</span>
+0008 <span class="comment">% slice (region), use the optional arguments y0 and h.</span>
+0009 <span class="comment">%</span>
+0010 <span class="comment">% This function uses the mercury peaks found in a compact fluorescent lamp's</span>
+0011 <span class="comment">% (CFL) spectrum as a wavelength reference. It is possible to use other</span>
+0012 <span class="comment">% reference peaks (e.g. neon) with this function by slightly modifying it.</span>
+0013 <span class="comment">%</span>
+0014 <span class="comment">% Syntax:  lambda = wavelength_calibrate(img, roi)</span>
+0015 <span class="comment">%</span>
+0016 <span class="comment">% Inputs:</span>
+0017 <span class="comment">%    img - an image matrix or an image's filename.</span>
+0018 <span class="comment">%    roi - region of interest of spectrograph to process.</span>
+0019 <span class="comment">%</span>
+0020 <span class="comment">% Outputs:</span>
+0021 <span class="comment">%    lambda - a calibrated wavelength scale in nanometers.</span>
+0022 <span class="comment">%</span>
+0023 <span class="comment">% Example:</span>
+0024 <span class="comment">%    lambda = wavelength_calibrate('path/filename');</span>
+0025 <span class="comment">%    h=100; y0=(size(I,1)-h)/2; lambda = wavelength_calibrate(I, [y0, h]);</span>
+0026 <span class="comment">%</span>
+0027 <span class="comment">% Other m-files required: image2spectrum</span>
+0028 <span class="comment">% Subfunctions: none</span>
+0029 <span class="comment">% MAT-files required: none</span>
+0030 <span class="comment">% Other files required: CFL_Hg_peaks_labeled.png</span>
+0031 <span class="comment">%</span>
+0032 <span class="comment">% See also: IMAGE2SPECTRUM, POLYFIT</span>
+0033 <span class="comment">%</span>
+0034 <span class="comment">% Author: Jonathan Thomson</span>
+0035 <span class="comment">% Work:</span>
+0036 <span class="comment">% email:</span>
+0037 <span class="comment">% Website: http://jethomson.wordpress.com</span>
+0038 <span class="comment">%</span>
+0039 
+0040 function lambda = wavelength_calibrate(img, roi)
+0041 
+0042     <span class="keyword">if</span> (nargin &lt; 1 || nargin &gt; 2)
+0043         usage(<span class="string">'wavelength_calibrate(img, roi)'</span>);
+0044     end
+0045 
+0046     <span class="comment">% Look at CFL_Hg_peaks_labeled.png to see the numbered peaks and their</span>
+0047     <span class="comment">% wavelengths. These are mercury (Hg) spectrum peaks. The zeros in</span>
+0048     <span class="comment">% REF_PEAK_WAVELENGTHS are for non-mercury peaks. Note that your CFL's</span>
+0049     <span class="comment">% spectrogram may show a second weaker peak near 407.783 nm next to peak 1</span>
+0050     <span class="comment">% at 404.656 nm. This is a mercury peak, but is not shown in the image</span>
+0051     <span class="comment">% CFL_Hg_peaks_labeled.png nor is it used for calibration.</span>
+0052 
+0053     <span class="comment">%NIST Atomic Spectra Database</span>
+0054     <span class="comment">%http://physics.nist.gov/PhysRefData/ASD/lines_form.html</span>
+0055     <span class="comment">%REF_PEAK_WAVELENGTHS = [404.6565, 435.8335, 0, 0, 546.0750, 0, 579.0670];</span>
+0056 
+0057     <span class="comment">%NIST Handbook of Basic Atomic Spectroscopic Data</span>
+0058     <span class="comment">%http://physics.nist.gov/PhysRefData/Handbook/Tables/mercurytable2.htm</span>
+0059     <span class="comment">%&quot;This handbook is designed to provide a selection of the most important</span>
+0060     <span class="comment">%and frequently used atomic spectroscopic data in an easily accessible</span>
+0061     <span class="comment">%format.&quot;</span>
+0062     REF_PEAK_WAVELENGTHS = [404.6563, 435.8328, 0, 0, 546.0735, 0, 579.0663];
+0063 
+0064     <span class="comment">% This is a user defined constant, but peak numbers 2, 5, and 7 should</span>
+0065     <span class="comment">% work fine if you are using a CFL as the reference.</span>
+0066     PEAKNUM = [2 5 7];
+0067 
+0068     scrsz = get(0, <span class="string">'ScreenSize'</span>);
+0069 
+0070     <span class="keyword">if</span> (~exist(<span class="string">'roi'</span>,<span class="string">'var'</span>) || isempty(roi))
+0071         roi = [0, 0];
+0072     end
+0073 
+0074     Z = image2spectrum(img, <span class="string">'rgb'</span>, roi);
+0075 
+0076     refpknm = REF_PEAK_WAVELENGTHS(PEAKNUM);
+0077 
+0078     <span class="comment">%if rng is large and peak 7 is too close to peak 6, peak 6 might be</span>
+0079     <span class="comment">%incorrectly picked.</span>
+0080     <span class="comment">%rng = -10:10;</span>
+0081     rng = -5:5;
+0082 
+0083     dataisgood = false;
+0084     <span class="keyword">while</span> (dataisgood == false)
+0085         n = figure(<span class="string">'Position'</span>, [1 1 0.9*scrsz(3) 0.9*scrsz(4)]);
+0086         hold on
+0087         plot(fliplr(Z))
+0088         m = max(max(Z));
+0089         a = axis;
+0090         axis([a(1) a(2) 0 1.10*m])
+0091 
+0092         for li = 1:length(PEAKNUM)
+0093             title([<span class="string">'Click on peak '</span> num2str(PEAKNUM(li)) <span class="string">'.'</span>]);
+0094             [x, ignored] = ginput(1); <span class="comment">% 2nd output of ginput() is mandatory</span>
+0095             x = round(x);
+0096 
+0097             <span class="comment">% The user cannot be expected to click exactly at the peak</span>
+0098             <span class="comment">% location so we should search on either side of gpxl</span>
+0099             <span class="comment">% (within a hardcoded range) to find the exact peak location.</span>
+0100             dx = x + rng;
+0101 
+0102             [peak_rgb, pkloc] = max(Z(dx,:));
+0103             [peak, chan] = max(peak_rgb); <span class="comment">% which channel has the highest peak</span>
+0104 
+0105             <span class="comment">% x-coordinate/column number of the peak</span>
+0106             pkx(li) = dx(1) + pkloc(chan) - 1;
+0107 
+0108             hold on, plot(pkx(li), peak, <span class="string">'k*'</span>)
+0109         end
+0110 
+0111         title([<span class="string">'The reference peaks'' locations have been recorded. '</span> <span class="cont">...</span>
+0112                <span class="string">'Please answer the question in the console.'</span>])
+0113         rsp = input([<span class="string">'Did you pick the correct peaks? '</span> <span class="cont">...</span>
+0114                      <span class="string">'If not, answer no to try again. [(y)es/(n)o/(q)uit]: '</span>], <span class="string">'s'</span>);
+0115         <span class="keyword">if</span> (~isempty(rsp) &amp;&amp; lower(rsp(1)) == <span class="string">'y'</span>)
+0116             dataisgood = true;
+0117         <span class="keyword">elseif</span> (~isempty(rsp) &amp;&amp; lower(rsp(1)) == <span class="string">'q'</span>)
+0118             close(n)
+0119             error(<span class="string">'wavelength_calibrate: instructed to quit by user.'</span>);
+0120         end
+0121 
+0122         close(n)
+0123     end
+0124 
+0125     <span class="keyword">if</span> (dataisgood == true)
+0126         [p, s] = polyfit(pkx, refpknm, 2);
+0127         lambda = polyval(p, (1:size(Z,1)).');
+0128     end
+0129 
+0130 end
+</pre>
+
+</body>
+</html>

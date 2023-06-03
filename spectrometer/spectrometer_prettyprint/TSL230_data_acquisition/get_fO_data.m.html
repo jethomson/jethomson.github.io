@@ -1,0 +1,206 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>TSL230_data_acquisition/get_fO_data.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">% This script communicates with the program TSL230_FreqCount running on an</span>
+0002 <span class="comment">% arduino supported atmega uc. It instructs the uc how the TSL230's sensitivity</span>
+0003 <span class="comment">% and frequency scaling should be set and receives the frequency count output</span>
+0004 <span class="comment">% from the uc.</span>
+0005 <span class="comment">%</span>
+0006 <span class="comment">% The atmega uc is controlled with simple commands over the serial line in the</span>
+0007 <span class="comment">% format cnnn, where 'c' means command and 'nnn' is a 3 character argument.</span>
+0008 <span class="comment">% s - stands for sensitivity, valid arguments are 000, 001, 010, and 100.</span>
+0009 <span class="comment">% f - stands for frequency scaling, valid arguments are 001, 002, 010, and 100.</span>
+0010 <span class="comment">% t - stands for transmit, valid arguments are 001-999. the transmit command</span>
+0011 <span class="comment">%       instructs the uc to enable the TSL230 and output nnn measurements taken</span>
+0012 <span class="comment">%       by the frequency meter.</span>
+0013 <span class="comment">% l - stands for light, valid arguments are 000 or 111. if the argument is</span>
+0014 <span class="comment">%       000/111 then the pin specified in the uc code will be brought low/high.</span>
+0015 <span class="comment">%       this pin can be used to drive an LED or switch a transitor or relay</span>
+0016 <span class="comment">%       off/on to control power to a lamp.</span>
+0017 <span class="comment">%</span>
+0018 <span class="comment">% The full scale frequency from the TSL230 equals (1.1 MHz)/fscale.</span>
+0019 <span class="comment">% The maximum input frequency that can be read by the FreqCount code running</span>
+0020 <span class="comment">% on the atmega is about 8 MHz when signal duty cycle is 50%. It's better to</span>
+0021 <span class="comment">% use divided outputs (i.e. fscale &gt;= 2) because they are 50% duty cycle square</span>
+0022 <span class="comment">% waves which are easier to capture than the fixed pulse width output when</span>
+0023 <span class="comment">% fscale is 1.</span>
+0024 <span class="comment">%</span>
+0025 <span class="comment">% The variable prefix fO is &quot;ef oh&quot; not &quot;ef zero&quot;. It's how the output frequency</span>
+0026 <span class="comment">% is denoted in the TSL230's datasheet. The output frequency is recorded when</span>
+0027 <span class="comment">% the lamp is on (fO_light) and off (fO_dark) so that the photodiode's thermal</span>
+0028 <span class="comment">% current, measured by fO_dark, can be removed.</span>
+0029 <span class="comment">%</span>
+0030 <span class="comment">% fO_light and fO_dark are not automatically saved. You should check for</span>
+0031 <span class="comment">% bad data before saving. If bad samples are present, remove them and run</span>
+0032 <span class="comment">% the script save_data.</span>
+0033 <span class="comment">%</span>
+0034 <span class="comment">% Tested in:</span>
+0035 <span class="comment">% -- WinXP: MATLAB 7.5.0 (R2700b), Octave 3.2.4</span>
+0036 <span class="comment">% -- Debian Wheezy: Octave 3.2.4</span>
+0037 <span class="comment">%</span>
+0038 <span class="comment">% MATLAB NOTES:</span>
+0039 <span class="comment">% fgetl doesn't return -1 when it reaches the end of the stream. Therefore, the</span>
+0040 <span class="comment">% uc sends a special end of transmission 'EOT' signal.</span>
+0041 <span class="comment">%</span>
+0042 
+0043 <span class="comment">%**** USER SUPPLIED DATA ****%</span>
+0044 
+0045 <span class="keyword">if</span> strcmpi(filesep, <span class="string">'/'</span>) <span class="comment">% in Linux</span>
+0046     port = <span class="string">'/dev/ttyUSB0'</span>;
+0047     <span class="comment">% same tty magic phrase used by arduino</span>
+0048     stty_arg = [<span class="string">'10:0:8bd:0:3:1c:7f:15:4:0:0:0:11:13:1a:0:12:f:17:16:0:0:'</span> <span class="cont">...</span>
+0049                 <span class="string">'0:0:0:0:0:0:0:0:0:0:0:0:0:0'</span>];
+0050     system([<span class="string">'/bin/stty --file='</span> port <span class="string">' '</span> stty_arg]);
+0051 <span class="keyword">elseif</span> strcmpi(filesep, <span class="string">'\'</span>) <span class="comment">% in Windows</span>
+0052     port = <span class="string">'COM5'</span>;
+0053 end
+0054 
+0055 <span class="comment">% use TSL230 for TSL230, TSL230A, and TSL230B</span>
+0056 <span class="comment">% use TSL230R for TSL230R, TSL230AR, and TSL230BR</span>
+0057 <span class="comment">% use TSL230RD for TSL230RD, TSL230ARD, and TSL230BRD</span>
+0058 sensor_type = <span class="string">'TSL230RD'</span>;
+0059 
+0060 sensitivity = 1;
+0061 fscale = 2;
+0062 num_samples = 20; <span class="comment">% number of frequency measurements.</span>
+0063 
+0064 <span class="comment">%light_pos = 10; % [inches], inverse square region for incandescents</span>
+0065 light_pos = 5; <span class="comment">% led position</span>
+0066 slit_pos = 2;
+0067 <span class="comment">% distance of light source from detector, [m]</span>
+0068 distance = (light_pos-slit_pos)*0.0254;
+0069 <span class="comment">%lamp_type = 'CFL';</span>
+0070 <span class="comment">%lamp_type = '100W_GE';</span>
+0071 <span class="comment">%lamp_type = '60W_Syl';</span>
+0072 <span class="comment">%lamp_type = '60W_GE';</span>
+0073 lamp_type = <span class="string">'cyan_LED'</span>;
+0074 
+0075 <span class="comment">% this is used by the script save_data.</span>
+0076 fname = [<span class="string">'s'</span> num2str(sensitivity) <span class="string">'f'</span> num2str(fscale) <span class="string">'_'</span> lamp_type <span class="string">'_'</span> <span class="cont">...</span>
+0077          num2str(light_pos-slit_pos) <span class="string">'.mat'</span>];
+0078 
+0079 <span class="comment">%**** END USER SUPPLIED DATA ****%</span>
+0080 
+0081 fO_light = -1;
+0082 fO_dark = -1;
+0083 
+0084 <span class="keyword">if</span> (exist(<span class="string">'OCTAVE_VERSION'</span>))
+0085     serial_write = @(spr, sstr) fputs(spr, sstr);
+0086 <span class="keyword">else</span>
+0087     serial_write = @(spr, sstr) fprintf(spr, <span class="string">'%s'</span>, sstr);
+0088 end
+0089 
+0090 <span class="comment">% pause_time is the amount of time to allow the serial buffer to fill with</span>
+0091 <span class="comment">% samples. one sample takes about 1.2 seconds to generate. 0.1 seconds per</span>
+0092 <span class="comment">% sample is added to be safe.</span>
+0093 pause_time = (1.2 + 0.1)*(num_samples+2); <span class="comment">% seconds</span>
+0094 <span class="comment">%pause_time = 20; %seconds, *DEBUG*DEBUG*DEBUG*DEBUG*</span>
+0095 
+0096 
+0097 sp = serial_open(port);
+0098 
+0099 serial_write(sp, <span class="string">'l111'</span>); <span class="comment">%turn on lamp (optional).</span>
+0100 
+0101 <span class="comment">% by not having a newline the cursor stays at the end of the line.</span>
+0102 fprintf(<span class="string">'Please turn on lamp. Then press the Enter key to continue.'</span>)
+0103 <span class="comment">% the pause command without an argument did not halt the script, so using</span>
+0104 <span class="comment">% input instead.</span>
+0105 ign = input(<span class="string">''</span>, <span class="string">'s'</span>);
+0106 fprintf(<span class="string">'\nThank you. Proceeding.'</span>)
+0107 
+0108 scmd = sprintf(<span class="string">'s%03d'</span>, sensitivity);
+0109 serial_write(sp, scmd); <span class="comment">%set sensitivity</span>
+0110 fcmd = sprintf(<span class="string">'f%03d'</span>, fscale);
+0111 serial_write(sp, fcmd); <span class="comment">%set frequency scaling</span>
+0112 tcmd = sprintf(<span class="string">'t%03d'</span>, num_samples+2); <span class="comment">%+2 because first two are discarded.</span>
+0113 serial_write(sp, tcmd); <span class="comment">%tell uc to start transmitting.</span>
+0114 
+0115 pause(pause_time); <span class="comment">%wait for data to be generated and transmitted to buffer</span>
+0116 
+0117 k = 1;
+0118 f = fgetl(sp); <span class="comment">% the first sample is usually bad, so discard it.</span>
+0119 f = fgetl(sp); <span class="comment">% the second sample is usually bad, so discard it.</span>
+0120 f = fgetl(sp);
+0121 <span class="keyword">while</span> (ischar(f) &amp;&amp; ~strcmp(f, <span class="string">'EOT'</span>) &amp;&amp; k &lt;= num_samples)
+0122     fO_light(k,:) = str2double(f);
+0123     k = k+1;
+0124     f = fgetl(sp);
+0125 end
+0126 
+0127 serial_write(sp, <span class="string">'s000'</span>); <span class="comment">%tell TSL230 to power down</span>
+0128 <span class="comment">% once fgetl has returned -1 (reached EOF) the serial port must be</span>
+0129 <span class="comment">% closed and re-opened to get any new data.</span>
+0130 fclose(sp);
+0131 
+0132 fprintf(<span class="string">'\nFinished gathering fO data with lamp on.\n\n'</span>);
+0133 
+0134 <span class="comment">%------------------------------------------------------------------------------%</span>
+0135 <span class="comment">%------------------------------------------------------------------------------%</span>
+0136 
+0137 <span class="comment">%re-open serial port</span>
+0138 sp = serial_open(port);
+0139 
+0140 serial_write(sp, <span class="string">'l000'</span>); <span class="comment">%turn off lamp (optional).</span>
+0141 
+0142 fprintf(<span class="string">'Please turn off lamp. Then press the Enter key to continue.'</span>)
+0143 <span class="comment">%pause</span>
+0144 <span class="comment">% the pause command without an argument did not halt the script, so using</span>
+0145 <span class="comment">% input instead.</span>
+0146 ign = input(<span class="string">''</span>, <span class="string">'s'</span>);
+0147 fprintf(<span class="string">'\nThank you. Proceeding.'</span>)
+0148 
+0149 <span class="comment">% sometimes re-opening serial port resets uc so the sensitivity and frequency</span>
+0150 <span class="comment">% scaling commands must be resent.</span>
+0151 scmd = sprintf(<span class="string">'s%03d'</span>, sensitivity);
+0152 serial_write(sp, scmd); <span class="comment">%set sensitivity</span>
+0153 fcmd = sprintf(<span class="string">'f%03d'</span>, fscale);
+0154 serial_write(sp, fcmd); <span class="comment">%set frequency scaling</span>
+0155 tcmd = sprintf(<span class="string">'t%03d'</span>, num_samples+2); <span class="comment">%+2 because first two are discarded.</span>
+0156 serial_write(sp, tcmd); <span class="comment">%tell uc to start transmitting.</span>
+0157 
+0158 pause(pause_time); <span class="comment">%wait for data to be generated and transmitted to buffer</span>
+0159 
+0160 k = 1;
+0161 f = fgetl(sp); <span class="comment">% the first sample is usually bad, so discard it.</span>
+0162 f = fgetl(sp); <span class="comment">% the second sample is usually bad, so discard it.</span>
+0163 f = fgetl(sp);
+0164 <span class="keyword">while</span> (ischar(f) &amp;&amp; ~strcmp(f, <span class="string">'EOT'</span>) &amp;&amp; k &lt;= num_samples)
+0165     fO_dark(k,:) = str2double(f);
+0166     k = k+1;
+0167     f = fgetl(sp);
+0168 end
+0169 
+0170 serial_write(sp, <span class="string">'s000'</span>); <span class="comment">%tell TSL230 to power down</span>
+0171 fclose(sp);
+0172 
+0173 fprintf(<span class="string">'\nFinished gathering fO data with lamp off.\n\n'</span>);
+0174 
+0175 <span class="comment">%------------------------------------------------------------------------------%</span>
+0176 <span class="comment">%------------------------------------------------------------------------------%</span>
+0177 
+0178 fO_light
+0179 fO_dark
+0180 
+0181 disp(<span class="string">'Check for bad data before saving.'</span>);
+0182 rsp = input(<span class="string">'Do you want to save? [(y)es/(n)o]: '</span>, <span class="string">'s'</span>);
+0183 <span class="keyword">if</span> (~isempty(rsp) &amp;&amp; lower(rsp(1)) == <span class="string">'y'</span>)
+0184     save_data;
+0185 end
+0186 
+</pre>
+
+</body>
+</html>

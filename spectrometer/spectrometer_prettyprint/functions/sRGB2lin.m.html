@@ -1,0 +1,71 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>functions/sRGB2lin.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%SRGB2LIN - Converts an image from sRGB to linear RGB.</span>
+0002 <span class="comment">%</span>
+0003 <span class="comment">% Syntax:  I = sRGB2lin(img)</span>
+0004 <span class="comment">%</span>
+0005 <span class="comment">% Inputs:</span>
+0006 <span class="comment">%    img   - an image matrix or an image's filename. Must be 8 bit.</span>
+0007 <span class="comment">%</span>
+0008 <span class="comment">% Outputs:</span>
+0009 <span class="comment">%    Ilin  - an image matrix containing data in linear RGB.</span>
+0010 <span class="comment">%</span>
+0011 <span class="comment">% Example:</span>
+0012 <span class="comment">%</span>
+0013 <span class="comment">%</span>
+0014 <span class="comment">% Other m-files required: frame_read</span>
+0015 <span class="comment">% Subfunctions: none</span>
+0016 <span class="comment">% MAT-files required: none</span>
+0017 <span class="comment">%</span>
+0018 <span class="comment">% See also: none</span>
+0019 <span class="comment">%</span>
+0020 <span class="comment">% Author: Jonathan Thomson</span>
+0021 <span class="comment">% Work:</span>
+0022 <span class="comment">% email:</span>
+0023 <span class="comment">% Website: http://jethomson.wordpress.com</span>
+0024 <span class="comment">%</span>
+0025 
+0026 function Ilin = sRGB2lin(img)
+0027 
+0028     <span class="keyword">if</span> (nargin ~= 1)
+0029         usage(<span class="string">'sRGB2lin(img)'</span>);
+0030     end
+0031 
+0032     <span class="keyword">if</span> ischar(img)
+0033         Isrgb = frame_read(img);
+0034     <span class="keyword">else</span>
+0035         Isrgb = double(img);
+0036     end
+0037 
+0038     I = Isrgb/255;
+0039     clear Isrgb;
+0040     [h, w, d] = size(I);
+0041     Ilin = zeros(h,w,d);
+0042     a = 0.055;
+0043     toe = (I &lt;= 0.04045);
+0044     pow = (I &gt; 0.04045);
+0045 
+0046     <span class="comment">%Ilin = (I./12.92).*(I &lt;= 0.04045) + (((I + a)/(1+a)).^2.4).*(I &gt; 0.04045);</span>
+0047     Ilin(toe) = (I(toe)./12.92);
+0048     Ilin(pow) = (((I(pow) + a)/(1+a)).^2.4);
+0049     Ilin = 255*Ilin;
+0050 
+0051 end
+</pre>
+
+</body>
+</html>

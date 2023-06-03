@@ -1,0 +1,85 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>functions/ensemble_average.m</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="highlight.m &copy; 2003 Guillaume Flandin">
+<style type="text/css">
+  .comment {color: #228B22;}
+  .string {color: #B20000;}
+  .keyword, .cont {color: #0000FF;}
+  .cont {text-decoration: underline;}
+  .code {color: #000000;}
+</style>
+</head>
+<body>
+<pre class="mcode">0001 <span class="comment">%ENSEMBLE_AVERAGE - Averages an ensemble of spectrographs.</span>
+0002 <span class="comment">%</span>
+0003 <span class="comment">% An ensemble is a group of spectrographs taken of the same subject under the</span>
+0004 <span class="comment">% same conditions. By averaging together an ensemble the SNR of the resulting</span>
+0005 <span class="comment">% spectrograph (A) will be improved by a factor of sqrt(n) compared to the SNR</span>
+0006 <span class="comment">% of a single spectrograph, where n is the number of spectrographs in ensemble.</span>
+0007 <span class="comment">%</span>
+0008 <span class="comment">% Syntax:  A = ensemble_average(imgdir)</span>
+0009 <span class="comment">%</span>
+0010 <span class="comment">% Inputs:</span>
+0011 <span class="comment">%   imgdir - directory containing the ensemble. imgdir should only contain</span>
+0012 <span class="comment">%            one type of file.</span>
+0013 <span class="comment">%</span>
+0014 <span class="comment">% Outputs:</span>
+0015 <span class="comment">%       A - the average of the ensemble of spectrographs.</span>
+0016 <span class="comment">%</span>
+0017 <span class="comment">% Example:</span>
+0018 <span class="comment">%      none</span>
+0019 <span class="comment">%</span>
+0020 <span class="comment">% Other m-files required: pop_dirname, myimread</span>
+0021 <span class="comment">% Subfunctions: none</span>
+0022 <span class="comment">% MAT-files required: none</span>
+0023 <span class="comment">%</span>
+0024 <span class="comment">% See also: POP_DIRNAME, MYIMREAD</span>
+0025 <span class="comment">%</span>
+0026 <span class="comment">% Author: Jonathan Thomson</span>
+0027 <span class="comment">% Work:</span>
+0028 <span class="comment">% email:</span>
+0029 <span class="comment">% Website: http://jethomson.wordpress.com</span>
+0030 <span class="comment">%</span>
+0031 
+0032 <span class="comment">% NOTES: Doing a median combine would be better than simply taking the mean, but</span>
+0033 <span class="comment">%        more resource intensive.</span>
+0034 
+0035 function A = ensemble_average(imgdir)
+0036 
+0037     <span class="keyword">if</span> (nargin &lt; 1 || nargin &gt; 2 || isempty(imgdir))
+0038         usage(<span class="string">'ensemble_average(imgdir)'</span>);
+0039     end
+0040 
+0041     s = filesep;
+0042     A = 0;
+0043 
+0044     [ftype, pdirpath] = pop_dirname(imgdir);
+0045     edir = [pdirpath s ftype];
+0046     ext = [<span class="string">'.'</span> ftype];
+0047     D = dir([edir s <span class="string">'*'</span> ext]);
+0048     nimgs = length(D);
+0049 
+0050     <span class="keyword">if</span> (nimgs == 0)
+0051         error([<span class="string">'ensemble_average: '</span> edir <span class="cont">...</span>
+0052               <span class="string">' contains no files of type '</span> ftype]);
+0053     <span class="keyword">else</span>
+0054         E = 0;
+0055         ensemble = {D.name};
+0056 
+0057         for li = 1:nimgs
+0058             I = myimread([edir s ensemble{li}]);
+0059             I = double(I);
+0060             E = E + I;
+0061         end
+0062         A = E/nimgs;  <span class="comment">% average the ensemble of images</span>
+0063     end
+0064 
+0065 end
+</pre>
+
+</body>
+</html>
