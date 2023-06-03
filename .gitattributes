@@ -1,0 +1,2 @@
+spectrometer/sample_data.zip filter=lfs diff=lfs merge=lfs -text
+spectrometer/minimal_sample_data.zip filter=lfs diff=lfs merge=lfs -text
